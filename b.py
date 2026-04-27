@@ -39,11 +39,14 @@ from google.oauth2.service_account import Credentials
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
-CREDENTIALS_FILE  = "credentials.json"
-SPREADSHEET_ID    = "1mqtqPdEO0WqVWTFd6f2nQzCLp-KjWcrziyaOUDl0lGY"
-SHEET_TAB         = "오가닉 + 무가시딩 트레킹"
-TRACKING_CSV      = "content_tracking.csv"
-LOG_FILE          = "content_scraper.log"
+CREDENTIALS_FILE       = "credentials.json"
+SPREADSHEET_ID         = "1mqtqPdEO0WqVWTFd6f2nQzCLp-KjWcrziyaOUDl0lGY"
+SHEET_TAB              = "오가닉 + 무가시딩 트레킹"
+TRACKING_CSV           = "content_tracking.csv"
+LOG_FILE               = "content_scraper.log"
+DASHBOARD_SPREADSHEET_ID = "169BceoxgHDYvRJ1siLNnNJXvjlOrL7LaR7uc9s4g9vk"
+TOP5_TAB               = "📊 Top 5 Daily Growth"
+TREND_TAB              = "📈 Growth Trend"
 
 # ── PASTE YOUR INSTAGRAM SESSION ID HERE ──────────────────────────────────────
 # How to get it:
@@ -640,7 +643,102 @@ def append_to_csv(rows: list[dict]):
     log.info(f"Appended {len(rows)} rows → {TRACKING_CSV}")
 
 
-# ─── 6. MAIN ─────────────────────────────────────────────────────────────────
+# ─── 6. WRITE DASHBOARD ──────────────────────────────────────────────────────
+def _get_dashboard_sheet():
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive",
+    ]
+    creds  = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=scopes)
+    client = gspread.authorize(creds)
+    return client.open_by_key(DASHBOARD_SPREADSHEET_ID)
+
+
+def _get_or_create_tab(spreadsheet, tab_name: str):
+    try:
+        return spreadsheet.worksheet(tab_name)
+    except gspread.exceptions.WorksheetNotFound:
+        return spreadsheet.add_worksheet(title=tab_name, rows=2000, cols=20)
+
+
+def _write_top5(spreadsheet, results: list[dict], today: str):
+    ws = _get_or_create_tab(spreadsheet, TOP5_TAB)
+    ws.clear()
+
+    with_deltas = [r for r in results if r.get("delta_views") is not None]
+    top5 = sorted(with_deltas, key=lambda r: int(r.get("delta_views") or 0), reverse=True)[:5]
+
+    col_headers = ["Rank", "Handle", "Channel", "Product", "Uploaded",
+                   "Total Views", "+Views Today", "ER%", "Trend"]
+
+    rows = [
+        [
+            i + 1,
+            r["handle"],
+            r["channel"],
+            r["product"],
+            r["uploaded_date"],
+            r.get("views") or 0,
+            r.get("delta_views") or 0,
+            f"{r.get('engagement_rate') or 0:.2f}%",
+            r.get("trend", "–"),
+        ]
+        for i, r in enumerate(top5)
+    ]
+
+    ws.update("A1", [[f"Top 5 Videos by Daily Growth — {today}"], [], col_headers] + rows)
+    try:
+        ws.format("A1", {"textFormat": {"bold": True, "fontSize": 14}})
+        ws.format("A3:I3", {"textFormat": {"bold": True}})
+    except Exception:
+        pass
+
+    log.info(f"  Top 5 tab updated: {len(top5)} videos")
+
+
+def _write_trend(spreadsheet, results: list[dict], today: str):
+    ws = _get_or_create_tab(spreadsheet, TREND_TAB)
+
+    existing = ws.get_all_values()
+    header = ["Date", "Handle", "Channel", "Product", "Uploaded",
+              "Views", "+Views", "Trend"]
+    if not existing or existing[0] != header:
+        ws.clear()
+        ws.update("A1", [header])
+        try:
+            ws.format("A1:H1", {"textFormat": {"bold": True}})
+        except Exception:
+            pass
+
+    rows_to_add = [
+        [
+            today,
+            r["handle"],
+            r["channel"],
+            r["product"],
+            r["uploaded_date"],
+            r.get("views") or 0,
+            r.get("delta_views") if r.get("delta_views") is not None else "–",
+            r.get("trend", "–"),
+        ]
+        for r in sorted(results, key=lambda r: int(r.get("delta_views") or 0), reverse=True)
+    ]
+
+    ws.append_rows(rows_to_add, value_input_option="USER_ENTERED")
+    log.info(f"  Growth Trend tab: appended {len(rows_to_add)} rows for {today}")
+
+
+def write_dashboard(results: list[dict], today: str):
+    try:
+        spreadsheet = _get_dashboard_sheet()
+        _write_top5(spreadsheet, results, today)
+        _write_trend(spreadsheet, results, today)
+        log.info("✅ Dashboard updated in Google Sheet")
+    except Exception as e:
+        log.warning(f"Dashboard write failed: {e}")
+
+
+# ─── 7. MAIN ─────────────────────────────────────────────────────────────────
 def run(dry_run: bool = False):
     today         = date.today().isoformat()
     records       = read_urls_from_sheet()
@@ -804,6 +902,7 @@ def run(dry_run: bool = False):
         browser.close()
 
     append_to_csv(results)
+    write_dashboard(results, today)
 
     # Summary
     zero_views = sum(1 for r in results if not r["views"])
