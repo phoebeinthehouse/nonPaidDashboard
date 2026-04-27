@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Non-Paid Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#F9FAFB;--surface:#FFFFFF;--surface2:#F3F4F6;
+  --border:#E5E7EB;--text:#111827;--muted:#6B7280;--subtle:#9CA3AF;
+  --radius:12px;--radius-sm:8px;
+  --green:#059669;--red:#DC2626;--blue:#3B82F6;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;}
+
+/* NAV */
+.nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;position:sticky;top:0;z-index:100;}
+.nav-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:0;}
+.nav-brand{font-size:13px;font-weight:700;color:var(--text);padding:14px 0;margin-right:2rem;white-space:nowrap;letter-spacing:-.01em;}
+.nav-brand span{color:var(--muted);font-weight:400;}
+.nav-right{margin-left:auto;font-size:12px;color:var(--subtle);padding:14px 0;}
+
+/* FILTER BAR */
+.filter-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:6px 1.5rem;}
+.filter-bar-inner{max-width:1280px;margin:0 auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.filter-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--subtle);margin-right:2px;white-space:nowrap;}
+.filter-btn{padding:4px 12px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:inherit;transition:all .15s;}
+.filter-btn:hover{border-color:#9CA3AF;}
+.filter-btn.active{background:var(--surface2);color:var(--text);border-color:#9CA3AF;font-weight:600;}
+.filter-sep{width:1px;height:16px;background:var(--border);margin:0 4px;}
+
+/* PAGE */
+.pg{max-width:1280px;margin:0 auto;padding:1.75rem 1.5rem;}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:1.5rem;}
+.page-title{font-size:20px;font-weight:700;letter-spacing:-.02em;}
+.page-sub{font-size:12px;color:var(--muted);margin-top:3px;}
+.section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--subtle);margin-bottom:10px;}
+
+/* KPI ROW */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1.5rem;}
+@media(max-width:900px){.kpi-row{grid-template-columns:repeat(3,1fr);}}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
+.kpi-l{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--subtle);margin-bottom:4px;}
+.kpi-v{font-size:22px;font-weight:700;letter-spacing:-.02em;}
+.kpi-v.green{color:var(--green);}
+.kpi-v.red{color:var(--red);}
+
+/* TOP 5 CARDS */
+.creator-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:1.5rem;}
+@media(max-width:1100px){.creator-grid{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:700px){.creator-grid{grid-template-columns:1fr;}}
+.creator-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;position:relative;}
+.ccard-top{display:flex;align-items:center;gap:10px;margin-bottom:1rem;}
+.ccard-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;color:#fff;}
+.ccard-name{font-size:14px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ccard-rank{font-size:11px;color:var(--muted);margin-top:1px;}
+.ccard-stats{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px;}
+.cstat{background:var(--surface2);border-radius:8px;padding:7px 9px;}
+.cstat-l{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--subtle);margin-bottom:2px;}
+.cstat-v{font-size:13px;font-weight:700;letter-spacing:-.01em;}
+.cstat-v.green{color:var(--green);}
+.cstat-v.red{color:var(--red);}
+.trend-badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;background:var(--surface2);color:var(--muted);}
+.rank-badge{position:absolute;top:10px;right:12px;font-size:24px;font-weight:800;color:#F3F4F6;line-height:1;}
+
+/* CHART */
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.5rem;margin-bottom:1.25rem;}
+.chart-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+.chart-title{font-size:13px;font-weight:700;}
+.chart-wrap{position:relative;}
+.chart-wrap canvas{max-height:280px;}
+.chart-empty{text-align:center;color:var(--subtle);font-size:13px;padding:48px 0;}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:.06em;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--surface2);}
+.tag{display:inline-block;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:600;}
+.tag-tiktok{background:#E0F2FE;color:#0369A1;}
+.tag-ig{background:#FCE7F3;color:#9D174D;}
+
+/* LOADING */
+#loading{text-align:center;padding:80px 32px;color:var(--muted);}
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--text);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#error-msg{display:none;background:#FEF2F2;color:#B91C1C;padding:14px 20px;border-radius:var(--radius);margin:24px;font-size:13px;}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="nav-brand">Non-Paid Dashboard <span>· Organic</span></div>
+    <div class="nav-right" id="asof-label"></div>
+  </div>
+</nav>
+
+<div class="filter-bar">
+  <div class="filter-bar-inner">
+    <span class="filter-label">Channel</span>
+    <button class="filter-btn active" onclick="setChannel('all',this)">All</button>
+    <button class="filter-btn" onclick="setChannel('tiktok',this)">TikTok</button>
+    <button class="filter-btn" onclick="setChannel('instagram',this)">Instagram</button>
+    <div class="filter-sep"></div>
+    <span class="filter-label">Sort by</span>
+    <button class="filter-btn active" id="sort-growth" onclick="setSort('growth',this)">Growth</button>
+    <button class="filter-btn" id="sort-views" onclick="setSort('views',this)">Total Views</button>
+    <button class="filter-btn" id="sort-er" onclick="setSort('er',this)">ER%</button>
+  </div>
+</div>
+
+<div id="loading"><span class="spinner"></span>Loading from Google Sheet…</div>
+<div id="error-msg"></div>
+
+<div class="pg" id="dashboard" style="display:none">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Video Performance</div>
+      <div class="page-sub" id="page-sub"></div>
+    </div>
+  </div>
+
+  <!-- KPI row -->
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-l">Total Videos</div><div class="kpi-v" id="kpi-total">—</div></div>
+    <div class="kpi"><div class="kpi-l">Total Views</div><div class="kpi-v" id="kpi-views">—</div></div>
+    <div class="kpi"><div class="kpi-l">Avg ER%</div><div class="kpi-v" id="kpi-er">—</div></div>
+    <div class="kpi"><div class="kpi-l">Growing</div><div class="kpi-v green" id="kpi-growing">—</div></div>
+    <div class="kpi"><div class="kpi-l">Dropping</div><div class="kpi-v red" id="kpi-dropping">—</div></div>
+  </div>
+
+  <!-- Top 5 -->
+  <div class="section-label">Top 5 Daily Growth</div>
+  <div class="creator-grid" id="top5-grid"></div>
+
+  <!-- Trend chart -->
+  <div class="chart-card">
+    <div class="chart-head">
+      <div class="chart-title">View Growth Trend — Top 10 Videos</div>
+    </div>
+    <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
+    <div class="chart-empty" id="chart-empty" style="display:none">
+      히스토리 없음 — snapshotDaily() 한 번 실행하거나 GitHub Actions 첫 실행 후 표시됩니다.
+    </div>
+  </div>
+
+  <!-- All videos table -->
+  <div class="chart-card">
+    <div class="chart-head"><div class="chart-title">All Videos</div></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Handle</th><th>Channel</th><th>Product</th>
+          <th>Uploaded</th><th>Total Views</th><th>+Views</th><th>ER%</th><th>Trend</th>
+        </tr></thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLORS = ['#3B82F6','#F59E0B','#10B981','#EF4444','#8B5CF6',
+                '#EC4899','#06B6D4','#84CC16','#F97316','#6366F1'];
+
+let state = { channel: 'all', sort: 'growth' };
+let payload = null;
+let trendChart = null;
+
+google.script.run
+  .withSuccessHandler(d => { payload = d; init(); })
+  .withFailureHandler(err => {
+    document.getElementById('loading').style.display = 'none';
+    const e = document.getElementById('error-msg');
+    e.style.display = 'block';
+    e.textContent = 'Failed to load: ' + (err.message || err);
+  })
+  .getDashboardData();
+
+function init() {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  document.getElementById('asof-label').textContent = 'As of ' + payload.asOf;
+  render();
+}
+
+function setChannel(ch, el) {
+  state.channel = ch;
+  document.querySelectorAll('.filter-bar .filter-btn').forEach(b => {
+    if (['all','tiktok','instagram'].some(x => b.textContent.toLowerCase().includes(x))) b.classList.remove('active');
+  });
+  el.classList.add('active');
+  render();
+}
+
+function setSort(s, el) {
+  state.sort = s;
+  document.querySelectorAll('#sort-growth,#sort-views,#sort-er').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+
+function filtered() {
+  let rows = payload.today || [];
+  if (state.channel !== 'all') {
+    rows = rows.filter(r => (r.channel || '').toLowerCase().includes(state.channel));
+  }
+  return rows;
+}
+
+function sorted(rows) {
+  return [...rows].sort((a, b) => {
+    if (state.sort === 'growth') {
+      const av = a.deltaViews ?? -Infinity, bv = b.deltaViews ?? -Infinity;
+      return bv - av;
+    }
+    if (state.sort === 'er') return (b.er || 0) - (a.er || 0);
+    return (b.views || 0) - (a.views || 0);
+  });
+}
+
+function fmt(n) {
+  const v = parseInt(n) || 0;
+  if (Math.abs(v) >= 1e6) return (v/1e6).toFixed(1) + 'M';
+  if (Math.abs(v) >= 1e3) return (v/1e3).toFixed(1) + 'K';
+  return v.toLocaleString();
+}
+function fmtD(v) {
+  if (v == null) return '—';
+  return (v > 0 ? '+' : '') + fmt(v);
+}
+function dCls(v) { return v == null ? '' : v > 0 ? 'green' : v < 0 ? 'red' : ''; }
+
+function render() {
+  const rows = filtered();
+  const srows = sorted(rows);
+  const hasD = rows.some(r => r.deltaViews != null);
+
+  // KPIs
+  const totalViews = rows.reduce((s, r) => s + (r.views || 0), 0);
+  const avgEr = rows.length ? (rows.reduce((s, r) => s + (r.er || 0), 0) / rows.length).toFixed(2) : 0;
+  const growing = rows.filter(r => r.deltaViews > 0).length;
+  const dropping = rows.filter(r => r.deltaViews < 0).length;
+  document.getElementById('kpi-total').textContent = rows.length;
+  document.getElementById('kpi-views').textContent = fmt(totalViews);
+  document.getElementById('kpi-er').textContent = avgEr + '%';
+  document.getElementById('kpi-growing').textContent = growing;
+  document.getElementById('kpi-dropping').textContent = dropping;
+  document.getElementById('page-sub').textContent =
+    rows.length + ' videos · ' + (hasD ? 'Daily growth data available' : 'No prior snapshot yet');
+
+  // Top 5 cards
+  const top5 = srows.slice(0, 5);
+  const grid = document.getElementById('top5-grid');
+  grid.innerHTML = top5.map((r, i) => {
+    const ch = (r.channel || '').toLowerCase();
+    const isIG = ch.includes('instagram');
+    const bg = COLORS[i % COLORS.length];
+    const initials = (r.handle || '?').replace('@','').slice(0,2).toUpperCase();
+    return `
+    <div class="creator-card">
+      <div class="rank-badge">${i+1}</div>
+      <div class="ccard-top">
+        <div class="ccard-av" style="background:${bg}">${initials}</div>
+        <div>
+          <div class="ccard-name">${r.handle || '—'}</div>
+          <div class="ccard-rank">${r.product || '—'}</div>
+        </div>
+      </div>
+      <div class="ccard-stats">
+        <div class="cstat">
+          <div class="cstat-l">Views</div>
+          <div class="cstat-v">${fmt(r.views)}</div>
+        </div>
+        <div class="cstat">
+          <div class="cstat-l">+Views</div>
+          <div class="cstat-v ${dCls(r.deltaViews)}">${fmtD(r.deltaViews)}</div>
+        </div>
+        <div class="cstat">
+          <div class="cstat-l">ER%</div>
+          <div class="cstat-v">${(r.er||0).toFixed(2)}%</div>
+        </div>
+        <div class="cstat">
+          <div class="cstat-l">Likes</div>
+          <div class="cstat-v">${fmt(r.likes)}</div>
+        </div>
+      </div>
+      <span class="tag ${isIG ? 'tag-ig' : 'tag-tiktok'}">${isIG ? 'Instagram' : 'TikTok'}</span>
+      &nbsp;<span class="trend-badge">${r.trend || '—'}</span>
+    </div>`;
+  }).join('');
+
+  // Trend chart
+  const dates = payload.dates || [];
+  const canvas = document.getElementById('trend-chart');
+  const empty = document.getElementById('chart-empty');
+  if (!dates.length) {
+    canvas.style.display = 'none';
+    empty.style.display = 'block';
+  } else {
+    canvas.style.display = 'block';
+    empty.style.display = 'none';
+    const top10 = [...rows].sort((a,b) => (b.views||0)-(a.views||0)).slice(0,10);
+    const datasets = top10.map((r, idx) => {
+      const hist = (payload.history && payload.history[r.url]) || [];
+      const map = {};
+      hist.forEach(h => map[h.date] = h.views);
+      return {
+        label: r.handle || r.url.slice(-12),
+        data: dates.map(d => map[d] ?? null),
+        borderColor: COLORS[idx % COLORS.length],
+        backgroundColor: COLORS[idx % COLORS.length] + '18',
+        tension: 0.3, pointRadius: 3, fill: false, spanGaps: true
+      };
+    });
+    if (trendChart) trendChart.destroy();
+    trendChart = new Chart(canvas, {
+      type: 'line',
+      data: { labels: dates, datasets },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+          y: { ticks: { font: { size: 11 }, callback: v => fmt(v) }, grid: { color: '#F3F4F6' } }
+        }
+      }
+    });
+  }
+
+  // Table
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = srows.map((r, i) => {
+    const ch = (r.channel || '').toLowerCase();
+    const isIG = ch.includes('instagram');
+    return `<tr>
+      <td style="color:var(--subtle);font-size:12px">${i+1}</td>
+      <td style="font-weight:500">${r.handle || '—'}</td>
+      <td><span class="tag ${isIG ? 'tag-ig' : 'tag-tiktok'}">${isIG ? 'Instagram' : 'TikTok'}</span></td>
+      <td>${r.product || '—'}</td>
+      <td style="color:var(--muted)">${r.uploadedDate || '—'}</td>
+      <td style="font-variant-numeric:tabular-nums">${fmt(r.views)}</td>
+      <td style="font-variant-numeric:tabular-nums;color:${r.deltaViews>0?'var(--green)':r.deltaViews<0?'var(--red)':'var(--muted)'};font-weight:${r.deltaViews!=null?600:400}">${fmtD(r.deltaViews)}</td>
+      <td style="font-variant-numeric:tabular-nums">${(r.er||0).toFixed(2)}%</td>
+      <td>${r.trend || '—'}</td>
+    </tr>`;
+  }).join('');
+}
+</script>
+</body>
+</html>
