@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<title>Non-Paid Video Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f6fa; color: #222; }
+
+  header { background: #fff; border-bottom: 1px solid #e0e0e0; padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 18px; font-weight: 700; }
+  #date-label { font-size: 13px; color: #888; }
+
+  #loading { text-align: center; padding: 80px 32px; color: #888; font-size: 15px; }
+  .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #ddd; border-top-color: #4f8ef7; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 10px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #dashboard { display: none; padding: 28px 32px; max-width: 1100px; margin: 0 auto; }
+
+  h2 { font-size: 15px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 14px; }
+
+  #top5-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; margin-bottom: 40px; }
+  .card {
+    background: #fff; border-radius: 10px; padding: 18px 16px;
+    border: 1px solid #eaeaea; position: relative;
+  }
+  .card .rank { position: absolute; top: 12px; right: 14px; font-size: 22px; font-weight: 800; color: #f0f0f0; }
+  .card .handle { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+  .card .meta { font-size: 12px; color: #999; margin-bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .views { font-size: 22px; font-weight: 700; color: #222; }
+  .card .delta { font-size: 13px; font-weight: 600; margin-top: 2px; }
+  .card .delta.pos { color: #22c55e; }
+  .card .delta.neg { color: #ef4444; }
+  .card .delta.zero { color: #aaa; }
+  .card .er { font-size: 12px; color: #888; margin-top: 6px; }
+  .card .trend-badge { display: inline-block; font-size: 11px; margin-top: 8px; padding: 2px 8px; border-radius: 20px; background: #f3f4f6; }
+
+  #trend-wrap { background: #fff; border-radius: 10px; border: 1px solid #eaeaea; padding: 24px; margin-bottom: 40px; }
+  #trend-wrap canvas { max-height: 320px; }
+  #trend-empty { text-align: center; color: #999; font-size: 13px; padding: 40px 0; }
+
+  #table-wrap { background: #fff; border-radius: 10px; border: 1px solid #eaeaea; overflow: auto; margin-bottom: 40px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 10px 14px; background: #fafafa; border-bottom: 1px solid #eaeaea; font-weight: 600; color: #666; white-space: nowrap; }
+  td { padding: 10px 14px; border-bottom: 1px solid #f2f2f2; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafbff; }
+  .num { font-variant-numeric: tabular-nums; }
+  .pos { color: #22c55e; font-weight: 600; }
+  .neg { color: #ef4444; font-weight: 600; }
+  .neutral { color: #aaa; }
+
+  #error { display: none; background: #fee; color: #c00; padding: 16px 24px; border-radius: 8px; margin: 24px; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Non-Paid Video Dashboard</h1>
+  <span id="date-label"></span>
+</header>
+
+<div id="loading"><span class="spinner"></span>Loading data from Google Sheet…</div>
+<div id="error"></div>
+
+<div id="dashboard">
+  <h2>Top 5 Daily Growth</h2>
+  <div id="top5-grid"></div>
+
+  <h2>View Growth — Top 10 Videos</h2>
+  <div id="trend-wrap"><canvas id="trend-chart"></canvas></div>
+
+  <h2>All Videos</h2>
+  <div id="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Handle</th><th>Channel</th><th>Product</th><th>Uploaded</th>
+          <th>Total Views</th><th>+Views</th><th>ER%</th><th>Trend</th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function fmtNum(n) {
+  const v = parseInt(n) || 0;
+  if (Math.abs(v) >= 1e6) return (v / 1e6).toFixed(1) + 'M';
+  if (Math.abs(v) >= 1e3) return (v / 1e3).toFixed(1) + 'K';
+  return v.toLocaleString();
+}
+function fmtDelta(v) {
+  if (v == null) return '–';
+  return (v > 0 ? '+' : '') + fmtNum(v);
+}
+function deltaClass(v) {
+  if (v == null) return 'neutral';
+  return v > 0 ? 'pos' : v < 0 ? 'neg' : 'neutral';
+}
+
+google.script.run
+  .withSuccessHandler(render)
+  .withFailureHandler(err => {
+    document.getElementById('loading').style.display = 'none';
+    const e = document.getElementById('error');
+    e.style.display = 'block';
+    e.textContent = 'Failed to load: ' + (err && err.message ? err.message : err);
+  })
+  .getDashboardData();
+
+function render(payload) {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  document.getElementById('date-label').textContent = 'As of ' + payload.asOf;
+
+  const today = payload.today || [];
+  const dates = payload.dates || [];
+
+  // Sort by deltaViews if available, else by views
+  const hasDeltas = today.some(r => r.deltaViews != null);
+  const sorted = [...today].sort((a, b) => {
+    if (hasDeltas) {
+      return (b.deltaViews ?? -Infinity) - (a.deltaViews ?? -Infinity);
+    }
+    return (b.views || 0) - (a.views || 0);
+  });
+
+  // ── Top 5 cards ──
+  const top5 = sorted.slice(0, 5);
+  const grid = document.getElementById('top5-grid');
+  grid.innerHTML = top5.map((r, i) => `
+    <div class="card">
+      <div class="rank">${i + 1}</div>
+      <div class="handle">${r.handle || '—'}</div>
+      <div class="meta">${r.channel || ''} · ${r.product || '—'}</div>
+      <div class="views">${fmtNum(r.views)}</div>
+      <div class="delta ${deltaClass(r.deltaViews)}">${fmtDelta(r.deltaViews)} ${hasDeltas ? 'views since last snapshot' : 'views total'}</div>
+      <div class="er">ER ${(r.er || 0).toFixed(2)}%</div>
+      <div class="trend-badge">${r.trend || '–'}</div>
+    </div>
+  `).join('');
+
+  // ── Trend chart — top 10 by views ──
+  const trendWrap = document.getElementById('trend-wrap');
+  if (!dates.length) {
+    trendWrap.innerHTML = '<div id="trend-empty">No history yet — run snapshotDaily() once to seed the trend chart.<br>It will fill in over time as daily snapshots accumulate.</div>';
+  } else {
+    const top10 = [...today].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 10);
+    const palette = ['#4f8ef7','#f7954f','#4fcbb5','#f74f6e','#a34ff7',
+                     '#f7e24f','#4ff773','#f74fc0','#4fd4f7','#b5f74f'];
+    const datasets = top10.map((r, idx) => {
+      const hist = (payload.history && payload.history[r.url]) || [];
+      const histMap = {};
+      hist.forEach(h => histMap[h.date] = h.views);
+      const data = dates.map(d => histMap[d] != null ? histMap[d] : null);
+      return {
+        label: r.handle || r.url.slice(-12),
+        data: data,
+        borderColor: palette[idx % palette.length],
+        backgroundColor: palette[idx % palette.length] + '22',
+        tension: 0.3, pointRadius: 3, fill: false, spanGaps: true
+      };
+    });
+
+    new Chart(document.getElementById('trend-chart'), {
+      type: 'line',
+      data: { labels: dates, datasets: datasets },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 } } } },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+          y: { ticks: { font: { size: 11 }, callback: v => fmtNum(v) }, grid: { color: '#f0f0f0' } }
+        }
+      }
+    });
+  }
+
+  // ── Full table ──
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = sorted.map(r => `
+    <tr>
+      <td>${r.handle || '—'}</td>
+      <td>${r.channel || ''}</td>
+      <td>${r.product || '—'}</td>
+      <td>${r.uploadedDate || '—'}</td>
+      <td class="num">${fmtNum(r.views)}</td>
+      <td class="num ${deltaClass(r.deltaViews)}">${fmtDelta(r.deltaViews)}</td>
+      <td class="num">${(r.er || 0).toFixed(2)}%</td>
+      <td>${r.trend || '–'}</td>
+    </tr>
+  `).join('');
+}
+</script>
+</body>
+</html>
