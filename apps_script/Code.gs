@@ -54,14 +54,17 @@ function getDashboardData() {
   let dates = [];
   const histSheet = ss.getSheetByName(HISTORY_TAB);
   if (histSheet && histSheet.getLastRow() > 1) {
-    const histData = histSheet.getRange(2, 1, histSheet.getLastRow() - 1, 3).getValues();
+    const firstRow = histSheet.getRange(1, 1, 1, 5).getValues()[0];
+    const isCsvFormat = String(firstRow[2]).toLowerCase() === 'channel';
+    const numCols = isCsvFormat ? 21 : 3;
+    const histData = histSheet.getRange(2, 1, histSheet.getLastRow() - 1, numCols).getValues();
     const dateSet = {};
     histData.forEach(row => {
       const date = row[0] instanceof Date
         ? Utilities.formatDate(row[0], TZ, 'yyyy-MM-dd')
         : String(row[0]);
-      const url = String(row[1] || '');
-      const views = parseInt(row[2]) || 0;
+      const url   = String(row[1] || '');
+      const views = parseInt(isCsvFormat ? row[9] : row[2]) || 0;
       if (!url) return;
       if (!history[url]) history[url] = [];
       history[url].push({ date: date, views: views });
