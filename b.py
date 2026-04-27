@@ -47,6 +47,7 @@ LOG_FILE               = "content_scraper.log"
 DASHBOARD_SPREADSHEET_ID = "169BceoxgHDYvRJ1siLNnNJXvjlOrL7LaR7uc9s4g9vk"
 TOP5_TAB               = "📊 Top 5 Daily Growth"
 TREND_TAB              = "📈 Growth Trend"
+HISTORY_TAB            = "_history"
 
 # ── PASTE YOUR INSTAGRAM SESSION ID HERE ──────────────────────────────────────
 # How to get it:
@@ -644,14 +645,17 @@ def append_to_csv(rows: list[dict]):
 
 
 # ─── 6. WRITE DASHBOARD ──────────────────────────────────────────────────────
+WRITE_SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive",
+]
+
+def _get_sheet_client():
+    creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=WRITE_SCOPES)
+    return gspread.authorize(creds)
+
 def _get_dashboard_sheet():
-    scopes = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive",
-    ]
-    creds  = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=scopes)
-    client = gspread.authorize(creds)
-    return client.open_by_key(DASHBOARD_SPREADSHEET_ID)
+    return _get_sheet_client().open_by_key(DASHBOARD_SPREADSHEET_ID)
 
 
 def _get_or_create_tab(spreadsheet, tab_name: str):
@@ -726,6 +730,41 @@ def _write_trend(spreadsheet, results: list[dict], today: str):
 
     ws.append_rows(rows_to_add, value_input_option="USER_ENTERED")
     log.info(f"  Growth Trend tab: appended {len(rows_to_add)} rows for {today}")
+
+
+def write_history_to_sheet(results: list[dict], today: str):
+    """Append today's scrape to _history tab in source spreadsheet.
+
+    This is what the Apps Script dashboard reads for trend charts and
+    daily growth deltas — so b.py running locally replaces the need to
+    run snapshotDaily() from Apps Script.
+    """
+    try:
+        ss = _get_sheet_client().open_by_key(SPREADSHEET_ID)
+        try:
+            ws = ss.worksheet(HISTORY_TAB)
+        except gspread.exceptions.WorksheetNotFound:
+            ws = ss.add_worksheet(title=HISTORY_TAB, rows=10000, cols=6)
+            ws.append_row(["date", "url", "views", "likes", "comments", "shares"])
+            ws.format("A1:F1", {"textFormat": {"bold": True}})
+
+        rows = [
+            [
+                today,
+                r["url"],
+                r.get("views") or 0,
+                r.get("likes") or 0,
+                r.get("comments") or 0,
+                r.get("shares") or 0,
+            ]
+            for r in results
+            if r.get("url")
+        ]
+        if rows:
+            ws.append_rows(rows, value_input_option="USER_ENTERED")
+        log.info(f"✅ _history tab updated: {len(rows)} rows for {today}")
+    except Exception as e:
+        log.warning(f"History sheet write failed: {e}")
 
 
 def write_dashboard(results: list[dict], today: str):
@@ -902,6 +941,7 @@ def run(dry_run: bool = False):
         browser.close()
 
     append_to_csv(results)
+    write_history_to_sheet(results, today)
     write_dashboard(results, today)
 
     # Summary
