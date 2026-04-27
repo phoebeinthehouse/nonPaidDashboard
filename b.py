@@ -26,6 +26,7 @@ import argparse
 import csv
 import json
 import logging
+import os
 import random
 import re
 import sys
@@ -54,7 +55,7 @@ HISTORY_TAB            = "_history"
 # 1. Open Chrome → instagram.com (logged in)
 # 2. F12 → Application → Cookies → https://www.instagram.com
 # 3. Find "sessionid" → copy the Value
-INSTAGRAM_SESSION_ID = "YOUR_SESSION_ID_HERE"
+INSTAGRAM_SESSION_ID = os.environ.get("INSTAGRAM_SESSION_ID", "YOUR_SESSION_ID_HERE")
 # ─────────────────────────────────────────────────────────────────────────────
 
 COL_NUMBER    = 1
