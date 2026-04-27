@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meta Ads Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+
+:root{
+  --bg:#F9FAFB;--surface:#FFFFFF;--surface2:#F3F4F6;
+  --border:#E5E7EB;--text:#111827;--muted:#6B7280;--subtle:#9CA3AF;
+  --radius:12px;--radius-sm:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;}
+
+/* NAV */
+.nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;position:sticky;top:0;z-index:100;}
+.nav-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:0;}
+.nav-brand{font-size:13px;font-weight:700;color:var(--text);padding:14px 0;margin-right:2rem;white-space:nowrap;letter-spacing:-.01em;}
+.nav-brand span{color:var(--muted);font-weight:400;}
+.nav-tab{padding:14px 16px;font-size:13px;font-weight:500;color:var(--muted);background:transparent;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s;}
+.nav-tab:hover{color:var(--text);}
+.nav-tab.active{color:var(--text);border-bottom-color:var(--text);}
+
+/* DATE BAR */
+.date-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:8px 1.5rem;}
+.date-bar-inner{max-width:1280px;margin:0 auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.dmt{padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:inherit;transition:all .15s;}
+.dmt.active{background:var(--text);color:#fff;}
+.date-sep{width:1px;height:16px;background:var(--border);margin:0 4px;}
+.mpill{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:inherit;transition:all .15s;}
+.mpill:hover{border-color:#9CA3AF;}
+.mpill.active{background:var(--text);color:#fff;border-color:var(--text);}
+.custom-range{display:flex;align-items:center;gap:8px;}
+.date-lbl{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+.date-input{padding:4px 10px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;font-family:inherit;outline:none;}
+.date-input:focus{border-color:var(--text);}
+.apply-btn{padding:5px 16px;border-radius:7px;background:var(--text);color:#fff;font-size:12px;font-weight:600;border:none;cursor:pointer;font-family:inherit;}
+
+/* FILTER BAR */
+.filter-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:6px 1.5rem;}
+.filter-bar-inner{max-width:1280px;margin:0 auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.filter-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--subtle);margin-right:2px;white-space:nowrap;}
+.filter-btn{padding:4px 12px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:inherit;transition:all .15s;}
+.filter-btn:hover{border-color:#9CA3AF;}
+.filter-btn.active{background:var(--surface2);color:var(--text);border-color:#9CA3AF;font-weight:600;}
+.filter-sep{width:1px;height:16px;background:var(--border);margin:0 4px;}
+#product-filter-pills{display:flex;gap:6px;flex-wrap:wrap;}
+
+/* PAGE */
+.pg{display:none;max-width:1280px;margin:0 auto;padding:1.75rem 1.5rem;}
+.pg.active{display:block;}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:1.5rem;}
+.page-title{font-size:20px;font-weight:700;letter-spacing:-.02em;}
+.page-sub{font-size:12px;color:var(--muted);margin-top:3px;}
+.section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--subtle);margin-bottom:10px;}
+
+/* METRIC TABS */
+.metric-tabs{display:flex;gap:4px;background:var(--surface2);border-radius:8px;padding:3px;}
+.cm-btn{padding:5px 14px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:inherit;transition:all .15s;}
+.cm-btn.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.08);}
+
+/* CREATOR CARDS */
+.creator-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:1.5rem;}
+@media(max-width:900px){.creator-grid{grid-template-columns:1fr;}}
+.creator-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;}
+.ccard-top{display:flex;align-items:center;gap:12px;margin-bottom:1rem;}
+.ccard-av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0;}
+.ccard-name{font-size:16px;font-weight:700;letter-spacing:-.01em;}
+.ccard-rank{font-size:11px;color:var(--muted);margin-top:2px;}
+.ccard-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.cstat{background:var(--surface2);border-radius:8px;padding:8px 10px;}
+.cstat-l{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--subtle);margin-bottom:3px;}
+.cstat-v{font-size:14px;font-weight:700;letter-spacing:-.01em;}
+.cstat-v.green{color:#059669;}
+.ccard-bar-row{display:flex;align-items:center;gap:8px;}
+.ccard-bar-label{font-size:11px;color:var(--muted);min-width:68px;}
+.ccard-bar-label:last-child{text-align:right;}
+.ccard-bar-track{flex:1;height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;}
+.ccard-bar-fill{height:100%;border-radius:3px;transition:width .5s ease;}
+
+/* CHARTS */
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.5rem;margin-bottom:1.25rem;}
+.chart-wrap{position:relative;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:1.25rem;}
+@media(max-width:700px){.two-col{grid-template-columns:1fr;}}
+
+/* PRODUCT PAGE */
+.prod-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+.prod-row:last-child{border-bottom:none;}
+.prod-name{min-width:60px;font-size:13px;font-weight:600;}
+.prod-bar-wrap{flex:1;background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;}
+.prod-bar{height:100%;background:#3B82F6;border-radius:4px;transition:width .5s ease;}
+.prod-stats{display:flex;gap:16px;min-width:280px;}
+.prod-stats span{font-size:12px;color:var(--muted);min-width:60px;text-align:right;}
+
+/* CREATIVE KPIs */
+.ckpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1.5rem;}
+@media(max-width:900px){.ckpi-row{grid-template-columns:repeat(3,1fr);}}
+.ckpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
+.ckpi-l{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--subtle);margin-bottom:4px;}
+.ckpi-v{font-size:22px;font-weight:700;letter-spacing:-.02em;}
+
+/* VIEW TOGGLE */
+.view-toggle{display:flex;gap:3px;background:var(--surface2);border-radius:8px;padding:3px;}
+.vbtn{padding:5px 10px;border-radius:6px;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:12px;font-family:inherit;transition:all .15s;display:flex;align-items:center;gap:4px;}
+.vbtn.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08);}
+
+/* CREATIVE CARDS */
+.creative-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:12px;margin-bottom:1.25rem;}
+.cc{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:box-shadow .18s,transform .15s;}
+.cc:hover{box-shadow:0 6px 20px rgba(0,0,0,.08);transform:translateY(-2px);}
+.cc-thumb{aspect-ratio:16/9;background:var(--surface2);overflow:hidden;position:relative;}
+.cc-thumb img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s;}
+.cc:hover .cc-thumb img{transform:scale(1.04);}
+.cc-play-icon{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.22);}
+.cc-body{padding:12px 13px;}
+.cc-title{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:7px;}
+.cc-tags{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:9px;}
+.cc-nums{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:9px;}
+.cc-nl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--subtle);margin-bottom:2px;}
+.cc-nv{font-size:13px;font-weight:600;}
+.cc-spark{height:28px;margin-bottom:8px;}
+.cc-foot{display:flex;align-items:center;justify-content:space-between;}
+
+/* TAGS */
+.tag{display:inline-block;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:600;}
+.tag-vdo{background:#DBEAFE;color:#1D4ED8;}
+.tag-img{background:#FEF3C7;color:#92400E;}
+.tag-prod{background:var(--surface2);color:var(--muted);}
+.tag-type{background:#D1FAE5;color:#065F46;}
+
+/* CHIP */
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;}
+.chip-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:.06em;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--surface2);cursor:pointer;}
+.td-name{font-weight:500;max-width:150px;overflow:hidden;text-overflow:ellipsis;}
+.bar-cell{display:flex;align-items:center;gap:8px;}
+.bar-bg{flex:1;height:4px;background:var(--surface2);border-radius:2px;min-width:50px;}
+.bar-fill{height:100%;border-radius:2px;}
+
+/* SORT TABS */
+.rank-tabs{display:flex;gap:4px;background:var(--surface2);border-radius:8px;padding:3px;}
+.rank-btn{padding:4px 11px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:inherit;transition:all .15s;}
+.rank-btn.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08);}
+
+/* PAGINATION */
+.pagi{padding:10px 0;display:flex;align-items:center;justify-content:space-between;}
+.pbtn{background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:4px 9px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;transition:all .15s;}
+.pbtn:hover:not(:disabled){border-color:#9CA3AF;color:var(--text);}
+.pbtn.active{background:var(--text);border-color:var(--text);color:#fff;}
+.pbtn:disabled{opacity:.3;cursor:not-allowed;}
+
+/* DRAWER */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.18);z-index:200;opacity:0;pointer-events:none;transition:opacity .25s;}
+.overlay.open{opacity:1;pointer-events:all;}
+.drawer{position:fixed;right:0;top:0;bottom:0;width:480px;background:var(--surface);border-left:1px solid var(--border);z-index:201;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;}
+.drawer.open{transform:none;}
+.dr-head{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.dr-title{font-size:15px;font-weight:700;line-height:1.4;word-break:break-all;}
+.dr-close{width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.dr-close:hover{background:var(--border);}
+.dr-body{flex:1;overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:16px;}
+.dr-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.dk{background:var(--surface2);border-radius:9px;padding:10px 12px;}
+.dk-l{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--subtle);margin-bottom:3px;}
+.dk-v{font-size:18px;font-weight:700;letter-spacing:-.02em;}
+.dr-sec{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--subtle);margin-bottom:8px;}
+.funnel-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.funnel-label{width:80px;font-size:11px;color:var(--muted);text-align:right;flex-shrink:0;}
+.funnel-bar-bg{flex:1;background:var(--surface2);border-radius:3px;height:5px;}
+.funnel-bar-fill{height:100%;border-radius:3px;}
+.funnel-val{width:50px;font-size:12px;font-weight:600;text-align:right;flex-shrink:0;}
+@media(max-width:900px){.drawer{width:100%;}}
+
+/* SORT SELECT */
+select.sort-select{padding:5px 26px 5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--surface2) url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%239CA3AF\' stroke-width=\'2\'%3E%3Cpath d=\'M6 9l6 6 6-6\'/%3E%3C/svg%3E') no-repeat right 8px center;color:var(--text);font-size:12px;font-family:inherit;cursor:pointer;outline:none;appearance:none;}
+
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="nav-brand">Meta Ads <span>Dashboard</span></div>
+    <button class="nav-tab active" onclick="goPage('creator',this)">By creator</button>
+    <button class="nav-tab" onclick="goPage('product',this)">By product</button>
+    <button class="nav-tab" onclick="goPage('creative',this)">By creative</button>
+  </div>
+</nav>
+
+<div class="date-bar">
+  <div class="date-bar-inner">
+    <button class="dmt active" data-mode="monthly" onclick="setDateMode('monthly')">Monthly</button>
+    <button class="dmt" data-mode="custom" onclick="setDateMode('custom')">Custom</button>
+    <div class="date-sep"></div>
+    <div id="monthly-pills" style="display:flex;gap:6px;flex-wrap:wrap;">
+      <button class="mpill active" onclick="setMonthPill('2026-03-01','2026-03-31',this)">Mar 2026</button>
+    </div>
+    <div id="custom-range" style="display:none" class="custom-range">
+      <span class="date-lbl">From</span>
+      <input type="date" class="date-input" id="dateFrom">
+      <span class="date-lbl">To</span>
+      <input type="date" class="date-input" id="dateTo">
+      <button class="apply-btn" onclick="applyCustomRange()">Apply</button>
+    </div>
+  </div>
+</div>
+
+<div class="filter-bar">
+  <div class="filter-bar-inner">
+    <span class="filter-label">Creator</span>
+    <button class="filter-btn active" data-filter="creator" onclick="setFilter('creator','ALL',this)">All</button>
+    <button class="filter-btn" data-filter="creator" onclick="setFilter('creator','Phoebe',this)">Phoebe</button>
+    <button class="filter-btn" data-filter="creator" onclick="setFilter('creator','Sarah',this)">Sarah</button>
+    <button class="filter-btn" data-filter="creator" onclick="setFilter('creator','Lina',this)">Lina</button>
+    <button class="filter-btn" data-filter="creator" onclick="setFilter('creator','stella',this)">stella</button>
+    <div class="filter-sep"></div>
+    <span class="filter-label">Media</span>
+    <button class="filter-btn active" data-filter="media" onclick="setFilter('media','ALL',this)">All</button>
+    <button class="filter-btn" data-filter="media" onclick="setFilter('media','vdo',this)">Video</button>
+    <button class="filter-btn" data-filter="media" onclick="setFilter('media','img',this)">Image</button>
+    <div class="filter-sep"></div>
+    <span class="filter-label">Product</span>
+    <button class="filter-btn active" data-filter="product" onclick="setFilter('product','ALL',this)">All</button>
+    <div id="product-filter-pills"></div>
+  </div>
+</div>
+
+<!-- CREATOR PAGE -->
+<div class="pg active" id="pg-creator">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Creator performance</div>
+      <div class="page-sub" id="creator-sub">Mar 2026 · Meta + Amazon</div>
+    </div>
+    <div class="metric-tabs">
+      <button class="cm-btn active" onclick="setCreatorMetric('clicks',this)">Clicks</button>
+      <button class="cm-btn" onclick="setCreatorMetric('ctr',this)">CTR</button>
+      <button class="cm-btn" onclick="setCreatorMetric('cpc',this)">CPC</button>
+    </div>
+  </div>
+  <div class="section-label">OVERVIEW</div>
+  <div class="creator-grid" id="creator-cards"></div>
+  <div class="chart-card">
+    <div class="chart-wrap" style="height:280px"><canvas id="trend-chart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-wrap" style="height:260px"><canvas id="vi-chart"></canvas></div>
+  </div>
+</div>
+
+<!-- PRODUCT PAGE -->
+<div class="pg" id="pg-product">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Product performance</div>
+      <div class="page-sub">제품별 성과</div>
+    </div>
+  </div>
+  <div class="two-col">
+    <div class="chart-card" style="margin-bottom:0">
+      <div class="section-label" style="margin-bottom:14px">SPEND BREAKDOWN</div>
+      <div style="height:220px"><canvas id="product-donut"></canvas></div>
+    </div>
+    <div class="chart-card" style="margin-bottom:0">
+      <div id="product-content"></div>
+    </div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-wrap" style="height:240px"><canvas id="product-creator-chart"></canvas></div>
+  </div>
+</div>
+
+<!-- CREATIVE PAGE -->
+<div class="pg" id="pg-creative">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Creative performance</div>
+      <div class="page-sub" id="creative-count"></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <div class="view-toggle">
+        <button class="vbtn active" onclick="setCreativeView('grid',this)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Grid
+        </button>
+        <button class="vbtn" onclick="setCreativeView('table',this)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>Table
+        </button>
+      </div>
+      <select id="sort-by" class="sort-select" onchange="renderCreativePage()">
+        <option value="spend">Sort: Spend</option>
+        <option value="purchases">Sort: Purchases</option>
+        <option value="ctr">Sort: CTR</option>
+        <option value="cpc">Sort: CPC</option>
+        <option value="cpa">Sort: CPA</option>
+      </select>
+    </div>
+  </div>
+  <div class="ckpi-row">
+    <div class="ckpi"><div class="ckpi-l">Total Spend</div><div class="ckpi-v" id="ckpi-spend">—</div></div>
+    <div class="ckpi"><div class="ckpi-l">Avg CTR</div><div class="ckpi-v" id="ckpi-ctr">—</div></div>
+    <div class="ckpi"><div class="ckpi-l">Avg CPC</div><div class="ckpi-v" id="ckpi-cpc">—</div></div>
+    <div class="ckpi"><div class="ckpi-l">Total Purchases</div><div class="ckpi-v" id="ckpi-pur">—</div></div>
+    <div class="ckpi"><div class="ckpi-l">Avg CPA</div><div class="ckpi-v" id="ckpi-cpa">—</div></div>
+  </div>
+  <div class="chart-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+      <span style="font-size:14px;font-weight:700">Top 10 Creatives</span>
+      <div class="rank-tabs">
+        <button class="rank-btn active" data-rank="spend" onclick="setRank('spend',this)">Spend</button>
+        <button class="rank-btn" data-rank="purchases" onclick="setRank('purchases',this)">Purchases</button>
+        <button class="rank-btn" data-rank="ctr" onclick="setRank('ctr',this)">CTR</button>
+        <button class="rank-btn" data-rank="cpa" onclick="setRank('cpa',this)">CPA&darr;</button>
+      </div>
+    </div>
+    <div style="height:280px"><canvas id="rank-chart"></canvas></div>
+  </div>
+  <div id="view-grid">
+    <div class="creative-grid" id="cc-grid"></div>
+    <div class="pagi" id="grid-pagi"></div>
+  </div>
+  <div id="view-table" style="display:none">
+    <div class="chart-card" style="padding:0;overflow:hidden">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Ad Name</th><th>Creator</th><th>Media</th><th>Product</th><th>Type</th>
+            <th>Spend</th><th>CTR%</th><th>CPC</th><th>Purchases</th><th>CPA</th>
+          </tr></thead>
+          <tbody id="tbl-body"></tbody>
+        </table>
+      </div>
+      <div class="pagi" id="tbl-pagi" style="padding:10px 16px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- DRAWER -->
+<div class="overlay" id="overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="dr-head">
+    <div><div class="dr-title" id="dr-title"></div><div style="margin-top:6px" id="dr-chips"></div></div>
+    <button class="dr-close" onclick="closeDrawer()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="dr-body">
+    <div id="dr-thumb" style="display:none"></div>
+    <div class="dr-kpis" id="dr-kpis"></div>
+    <div><div class="dr-sec">Daily Performance</div><div style="height:180px"><canvas id="dr-chart"></canvas></div></div>
+    <div><div class="dr-sec">Amazon Funnel</div><div id="dr-funnel"></div></div>
+  </div>
+</div>
+<script>
+window.__ASSETS__    = {"before1|Sarah": {"image_url": "", "video_url": "https://drive.google.com/file/d/1Wp6nX33vfh_5sHvExfjCNVW5bslD5QVa/preview", "video_thumb": "https://drive.google.com/thumbnail?id=1Wp6nX33vfh_5sHvExfjCNVW5bslD5QVa&sz=w800"}, "milkydewASMR|Lina": {"image_url": "", "video_url": "https://drive.google.com/file/d/1SiPMNHTPpOLyvPnVlFmMkNsntFSHYub2/preview", "video_thumb": "https://drive.google.com/thumbnail?id=1SiPMNHTPpOLyvPnVlFmMkNsntFSHYub2&sz=w800"}, "chxrry|stella": {"image_url": "", "video_url": "", "video_thumb": ""}, "Rudolph|Lina": {"image_url": "", "video_url": "", "video_thumb": ""}, "chxrry-p|stella": {"image_url": "", "video_url": "", "video_thumb": ""}, "B&A|Lina": {"image_url": "https://lh3.googleusercontent.com/d/1T0gBDhb5Yy3wll_LRMyFjuPza4KNwtOX", "video_url": "", "video_thumb": ""}, "real|Sarah": {"image_url": "https://lh3.googleusercontent.com/d/1F9rhUCIKYJZSCq9DBYCbdBrf1kF-eSFN", "video_url": "", "video_thumb": ""}, "KimHyunjiASMR|Phoebe": {"image_url": "", "video_url": "", "video_thumb": ""}, "KimMissokASMR|Phoebe": {"image_url": "", "video_url": "", "video_thumb": ""}, "milkydew-p|stella": {"image_url": "", "video_url": "", "video_thumb": ""}, "Regrets|Lina": {"image_url": "", "video_url": "", "video_thumb": ""}, "noMore|Phoebe": {"image_url": "https://lh3.googleusercontent.com/d/1wUTa98OOmBJb5lJatA8rYredVryZmAxJ", "video_url": "", "video_thumb": ""}, "no1|Phoebe": {"image_url": "https://lh3.googleusercontent.com/d/1KdseUy8FvhWYUQLPgrprz1t_96ARkNib", "video_url": "", "video_thumb": ""}, "before|Sarah": {"image_url": "", "video_url": "https://drive.google.com/file/d/1lhGq2V3APrfve3KeweVJ-eDppOf4fOsh/preview", "video_thumb": "https://drive.google.com/thumbnail?id=1lhGq2V3APrfve3KeweVJ-eDppOf4fOsh&sz=w800"}, "thelipstickgirly2|Lina": {"image_url": "", "video_url": "https://drive.google.com/file/d/1Hjd2E7bHEtUtaXtHO4ku44I4rxg-KTa2/preview", "video_thumb": "https://drive.google.com/thumbnail?id=1Hjd2E7bHEtUtaXtHO4ku44I4rxg-KTa2&sz=w800"}, "creamyCleanse|Lina": {"image_url": "https://lh3.googleusercontent.com/d/1JPgllvdFqi_3OQXiNIfnhtB439wRcBxb", "video_url": "", "video_thumb": ""}, "DangPoster|Lina": {"image_url": "", "video_url": "", "video_thumb": ""}, "africa|stella": {"image_url": "", "video_url": "", "video_thumb": ""}, "smooth01|Sarah": {"image_url": "", "video_url": "https://drive.google.com/file/d/1dBCjeT4hRVs3Pl9QqJxeqUUujuV6m99t/preview", "video_thumb": "https://dr
+</script>
+<script>
+// ── DATA (injected) ────────────────────────────────────────────────────────
+let RAW_DATA      = window.__RAW__ || [];       
+let CREATIVE_DATA = window.__CREATIVES__ || []; 
+const ASSETS      = window.__ASSETS__ || {};
+
+const CC = { Phoebe:'#D4537E', Sarah:'#1D9E75', Lina:'#378ADD', stella:'#8B5CF6', Unknown:'#9CA3AF' };
+const CREATORS = ['Phoebe', 'Sarah', 'Lina', 'stella'];
+let ALL_DATES = [];
+let MIN_DATE  = "";
+let MAX_DATE  = "";
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+let state = {
+  page:       'creator',   // creator | product | creative
+  dateMode:   'monthly',   // monthly | custom
+  dateFrom:   MIN_DATE,
+  dateTo:     MAX_DATE,
+  creatorMetric: 'clicks', // clicks | ctr | cpc
+  creatorFilter: 'ALL',
+  mediaFilter:   'ALL',
+  productFilter: 'ALL',
+  rankMetric: 'spend',
+  bdMetric:   { creator:'spend', media:'spend', product:'spend' },
+  creativeView: 'grid',
+  gridPage: 1,
+  tblPage:  1,
+};
+const GP = 12, TP = 20;
+let charts = {};
+
+// ── HELPERS ────────────────────────────────────────────────────────────────
+function filteredRaw() {
+  return RAW_DATA.filter(r =>
+    r[0] >= state.dateFrom && r[0] <= state.dateTo &&
+    (state.creatorFilter === 'ALL' || r[2] === state.creatorFilter) &&
+    (state.mediaFilter   === 'ALL' || r[3] === state.mediaFilter) &&
+    (state.productFilter === 'ALL' || r[5] === state.productFilter)
+  );
+}
+
+function aggCreatives(rawRows) {
+  const map = {};
+  rawRows.forEach(r => {
+    const key = r[6] + '|' + r[2]; // adname|creator
+    if (!map[key]) map[key] = {
+      ad_name: r[6], creator: r[2], media_type: r[3], ad_type: r[4], product: r[5],
+      spend:0, lc:0, imp:0, daily:{}
+    };
+    map[key].spend += r[11]; map[key].lc += r[12]; map[key].imp += r[7];
+    if (!map[key].daily[r[0]]) map[key].daily[r[0]] = {spend:0,lc:0,imp:0};
+    map[key].daily[r[0]].spend += r[11];
+    map[key].daily[r[0]].lc   += r[12];
+    map[key].daily[r[0]].imp  += r[7];
+  });
+  return Object.values(map).map(c => {
+    const full = CREATIVE_DATA.find(x => x.ad_name===c.ad_name && x.creator===c.creator) || {};
+    const ast  = ASSETS[c.ad_name+'|'+c.creator] || {};
+    const pur  = full.purchases || 0;
+    return {
+      ...c, purchases:pur, atc:full.atc||0, dpv:full.dpv||0,
+      ctr: c.imp>0 ? c.lc/c.imp*100 : 0,
+      cpc: c.lc>0  ? c.spend/c.lc   : 0,
+      cpa: pur>0   ? c.spend/pur     : 0,
+      image_url:    ast.image_url   ||'',
+      video_url:    ast.video_url   ||'',
+      video_thumb:  ast.video_thumb ||'',
+    };
+  });
+}
+
+function filteredCreatives() {
+  const raw = filteredRaw();
+  let d = aggCreatives(raw).filter(c =>
+    (state.creatorFilter==='ALL' || c.creator===state.creatorFilter) &&
+    (state.mediaFilter==='ALL'   || c.media_type===state.mediaFilter) &&
+    (state.productFilter==='ALL' || c.product===state.productFilter)
+  );
+  const sm = document.getElementById('sort-by')?.value || 'spend';
+  d.sort((a,b) => sm==='cpc'||sm==='cpa' ? a[sm]-b[sm] : b[sm]-a[sm]);
+  return d;
+}
+
+// ── DATE HELPERS ───────────────────────────────────────────────────────────
+function setDateMode(mode) {
+  state.dateMode = mode;
+  document.querySelectorAll('.dmt').forEach(b => b.classList.toggle('active', b.dataset.mode===mode));
+  document.getElementById('monthly-pills').style.display = mode==='monthly' ? 'flex' : 'none';
+  document.getElementById('custom-range').style.display  = mode==='custom'  ? 'flex' : 'none';
+}
+
+function setMonthPill(from, to, el) {
+  state.dateFrom = from; state.dateTo = to;
+  document.querySelectorAll('.mpill').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  render();
+}
+
+function applyCustomRange() {
+  state.dateFrom = document.getElementById('dateFrom').value;
+  state.dateTo   = document.getElementById('dateTo').value;
+  render();
+}
+
+// ── NAV ─────────────────────────────────────────────────────────────────────
+function goPage(page, el) {
+  state.page = page;
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.pg').forEach(p => p.classList.remove('active'));
+  document.getElementById('pg-'+page).classList.add('active');
+  render();
+}
+
+function setFilter(key, val, el) {
+  state[key+'Filter'] = val;
+  document.querySelectorAll('[data-filter="'+key+'"]').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  state.gridPage = 1; state.tblPage = 1;
+  render();
+}
+
+function setCreatorMetric(m, el) {
+  state.creatorMetric = m;
+  document.querySelectorAll('.cm-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderCreatorPage();
+}
+
+// ── RENDER ROUTER ──────────────────────────────────────────────────────────
+function render() {
+  if (state.page === 'creator')  renderCreatorPage();
+  if (state.page === 'product')  renderProductPage();
+  if (state.page === 'creative') renderCreativePage();
+}
+
+// ── CREATOR PAGE ─────────────────────────────────────────────────────────
+function renderCreatorPage() {
+  const raw = filteredRaw();
+
+  // Aggregate by creator
+  const byC = {};
+  CREATORS.forEach(n => byC[n] = {spend:0,lc:0,imp:0,clicks:0,vdo:{lc:0,imp:0},img:{lc:0,imp:0}});
+  raw.forEach(r => {
+    const c=r[2]; if(!byC[c]) return;
+    byC[c].spend+=r[11]; byC[c].lc+=r[12]; byC[c].imp+=r[7]; byC[c].clicks+=r[12];
+    const mt=r[3]; if(byC[c][mt]){byC[c][mt].lc+=r[12];byC[c][mt].imp+=r[7];}
+  });
+
+  // Purchases from creative data
+  const purByC = {};
+  aggCreatives(raw).forEach(c => { purByC[c.creator]=(purByC[c.creator]||0)+c.purchases; });
+
+  // Rank by metric
+  const metricVal = n => {
+    const s = byC[n];
+    if (!s || s.imp===0) return 0;
+    if (state.creatorMetric==='clicks') return s.lc;
+    if (state.creatorMetric==='ctr')    return s.imp>0?s.lc/s.imp*100:0;
+    if (state.creatorMetric==='cpc')    return s.lc>0?s.spend/s.lc:0;
+    return s.lc;
+  };
+  const ranked = [...CREATORS].filter(n=>byC[n]&&byC[n].imp>0)
+    .sort((a,b) => state.creatorMetric==='cpc' ? metricVal(a)-metricVal(b) : metricVal(b)-metricVal(a));
+
+  // Sub-heading
+  const from = state.dateFrom.slice(0,7).replace('-','/'), to = state.dateTo.slice(0,7).replace('-','/');
+  document.getElementById('creator-sub').textContent =
+    (from===to ? from : from+' – '+to) + ' · Meta + Amazon';
+
+  // Render cards
+  const grid = document.getElementById('creator-cards');
+  grid.innerHTML = '';
+  ranked.forEach((name, idx) => {
+    const s = byC[name];
+    const color = CC[name];
+    const ctr   = s.imp>0 ? s.lc/s.imp*100 : 0;
+    const cpc   = s.lc>0  ? s.spend/s.lc   : 0;
+    const vPct  = s.lc>0  ? s.vdo.lc/s.lc*100 : 0;
+    const iPct  = 100 - vPct;
+    const pur   = purByC[name] || 0;
+    const metLabel = state.creatorMetric==='ctr'?ctr.toFixed(2)+'%':state.creatorMetric==='cpc'?'₩'+Math.round(cpc).toLocaleString():s.lc.toLocaleString();
+
+    const card = document.createElement('div');
+    card.className = 'creator-card';
+    card.innerHTML =
+      '<div class="ccard-top">'
+      + '<div class="ccard-av" style="background:'+color+';color:#fff">'+name[0]+'</div>'
+      + '<div class="ccard-info"><div class="ccard-name">'+name+'</div><div class="ccard-rank">Rank #'+(idx+1)+' by '+state.creatorMetric+'</div></div>'
+      + '</div>'
+      + '<div class="ccard-stats">'
+      + '<div class="cstat"><div class="cstat-l">CLICKS</div><div class="cstat-v">'+s.lc.toLocaleString()+'</div></div>'
+      + '<div class="cstat"><div class="cstat-l">CTR</div><div class="cstat-v">'+ctr.toFixed(2)+'%</div></div>'
+      + '<div class="cstat"><div class="cstat-l">CPC</div><div class="cstat-v">₩'+Math.round(cpc).toLocaleString()+'</div></div>'
+      + '<div class="cstat"><div class="cstat-l">SPEND</div><div class="cstat-v">₩'+Math.round(s.spend/1000).toLocaleString()+'K</div></div>'
+      + '<div class="cstat"><div class="cstat-l">PURCHASES</div><div class="cstat-v'+(pur>0?' green':'')+'">'+(pur||'—')+'</div></div>'
+      + '<div class="cstat"><div class="cstat-l">REVENUE</div><div class="cstat-v">—</div></div>'
+      + '</div>'
+      + '<div class="ccard-bar-row">'
+      + '<span class="ccard-bar-label">Video '+Math.round(vPct)+'%</span>'
+      + '<div class="ccard-bar-track"><div class="ccard-bar-fill" style="width:'+vPct.toFixed(1)+'%;background:'+color+'"></div></div>'
+      + '<span class="ccard-bar-label" style="text-align:right">Image '+Math.round(iPct)+'%</span>'
+      + '</div>';
+    grid.appendChild(card);
+  });
+
+  // Trend chart
+  renderCreatorTrend(raw, byC);
+
+  // Video vs Image bar chart
+  renderVideoImageChart(raw);
+}
+
+function renderCreatorTrend(raw, byC) {
+  const dates = [...new Set(raw.map(r=>r[0]))].sort();
+  const metric = state.creatorMetric;
+
+  const datasets = CREATORS.filter(n=>byC[n]&&byC[n].imp>0).map(name => {
+    const color = CC[name];
+    const vals = dates.map(d => {
+      const rows = raw.filter(r=>r[0]===d&&r[2]===name);
+      if (!rows.length) return null;
+      const imp=rows.reduce((s,r)=>s+r[7],0), lc=rows.reduce((s,r)=>s+r[12],0), sp=rows.reduce((s,r)=>s+r[11],0);
+      if (metric==='clicks') return lc;
+      if (metric==='ctr')    return imp>0?lc/imp*100:0;
+      if (metric==='cpc')    return lc>0?sp/lc:0;
+      return lc;
+    });
+    return {label:name, data:vals, borderColor:color, backgroundColor:'transparent', borderWidth:2, pointRadius:3, pointBackgroundColor:color, tension:.4, spanGaps:true};
+  });
+
+  const metricLabel = metric==='clicks'?'Clicks':metric==='ctr'?'CTR (%)':'CPC (₩)';
+  const ctx = document.getElementById('trend-chart').getContext('2d');
+  if (charts.trend) charts.trend.destroy();
+  charts.trend = new Chart(ctx, {
+    type:'line',
+    data:{labels:dates, datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{position:'top',align:'end',labels:{color:'#374151',font:{size:12},boxWidth:10,padding:16,usePointStyle:true,pointStyle:'circle'}},
+        title:{display:true,text:'Daily '+metricLabel+' by creator',align:'start',color:'#111827',font:{size:14,weight:'600'},padding:{bottom:16}}
+      },
+      scales:{
+        x:{ticks:{color:'#9CA3AF',font:{size:11}},grid:{color:'#F3F4F6'},border:{display:false}},
+        y:{ticks:{color:'#9CA3AF',font:{size:11},callback:v=>metric==='ctr'?v.toFixed(1)+'%':metric==='cpc'?'₩'+Math.round(v/1000)+'K':v.toLocaleString()},grid:{color:'#F3F4F6'},border:{display:false}}
+      }
+    }
+  });
+}
+
+function renderVideoImageChart(raw) {
+  const labels = CREATORS.filter(n => raw.some(r=>r[2]===n));
+  const vData = labels.map(n => raw.filter(r=>r[2]===n&&r[3]==='vdo').reduce((s,r)=>s+r[12],0));
+  const iData = labels.map(n => raw.filter(r=>r[2]===n&&r[3]==='img').reduce((s,r)=>s+r[12],0));
+
+  const ctx = document.getElementById('vi-chart').getContext('2d');
+  if (charts.vi) charts.vi.destroy();
+  charts.vi = new Chart(ctx, {
+    type:'bar',
+    data:{labels, datasets:[
+      {label:'Video', data:vData, backgroundColor:labels.map(n=>CC[n]+'dd'), borderRadius:4},
+      {label:'Image', data:iData, backgroundColor:labels.map(n=>CC[n]+'55'), borderRadius:4},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'top',align:'end',labels:{color:'#374151',font:{size:12},boxWidth:10,padding:16,usePointStyle:true,pointStyle:'rect'}},
+        title:{display:true,text:'Video vs image — Clicks by creator',align:'start',color:'#111827',font:{size:14,weight:'600'},padding:{bottom:16}}
+      },
+      scales:{
+        x:{ticks:{color:'#9CA3AF'},grid:{display:false},border:{display:false}},
+        y:{ticks:{color:'#9CA3AF',callback:v=>v>=1000?Math.round(v/1000)+'K':v},grid:{color:'#F3F4F6'},border:{display:false}}
+      }
+    }
+  });
+}
+
+// ── PRODUCT PAGE ────────────────────────────────────────────────────────────
+function renderProductPage() {
+  const raw = filteredRaw();
+  const byP = {};
+  raw.forEach(r => {
+    const p=r[5]||'Unknown'; if(!byP[p]) byP[p]={spend:0,lc:0,imp:0};
+    byP[p].spend+=r[11]; byP[p].lc+=r[12]; byP[p].imp+=r[7];
+  });
+  const products = Object.entries(byP).sort((a,b)=>b[1].spend-a[1].spend);
+  const maxSpend = products[0]?.[1].spend || 1;
+
+  const container = document.getElementById('product-content');
+  container.innerHTML = products.map(([name, s]) => {
+    const ctr=s.imp>0?s.lc/s.imp*100:0, cpc=s.lc>0?s.spend/s.lc:0;
+    const pct=(s.spend/maxSpend*100).toFixed(1);
+    return '<div class="prod-row">'
+      +'<div class="prod-name">'+name+'</div>'
+      +'<div class="prod-bar-wrap"><div class="prod-bar" style="width:'+pct+'%"></div></div>'
+      +'<div class="prod-stats">'
+      +'<span>₩'+Math.round(s.spend/1000).toLocaleString()+'K</span>'
+      +'<span>'+ctr.toFixed(2)+'%</span>'
+      +'<span>₩'+Math.round(cpc).toLocaleString()+'</span>'
+      +'<span>'+s.lc.toLocaleString()+' clicks</span>'
+      +'</div></div>';
+  }).join('');
+
+  // Product spend donut
+  const ctx = document.getElementById('product-donut').getContext('2d');
+  if (charts.pdoughnut) charts.pdoughnut.destroy();
+  const palette = ['#3B82F6','#EC4899','#10B981','#8B5CF6','#F59E0B','#06B6D4','#EF4444'];
+  charts.pdoughnut = new Chart(ctx, {
+    type:'doughnut',
+    data:{labels:products.map(([n])=>n), datasets:[{data:products.map(([,s])=>s.spend), backgroundColor:products.map((_,i)=>palette[i%7]), borderWidth:2, borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+      plugins:{legend:{position:'right',labels:{color:'#374151',font:{size:12},padding:12}},
+        tooltip:{callbacks:{label:ctx=>' ₩'+Math.round(ctx.raw/1000).toLocaleString()+'K'}}}
+    }
+  });
+
+  // Per-creator × product CTR
+  renderProductCreatorChart(raw, products.map(([n])=>n));
+}
+
+function renderProductCreatorChart(raw, products) {
+  const ctx = document.getElementById('product-creator-chart').getContext('2d');
+  if (charts.pcreator) charts.pcreator.destroy();
+  const datasets = CREATORS.map(name => {
+    const color = CC[name];
+    const data = products.map(p => {
+      const rows = raw.filter(r=>r[2]===name&&r[5]===p);
+      const imp=rows.reduce((s,r)=>s+r[7],0), lc=rows.reduce((s,r)=>s+r[12],0);
+      return imp>0?lc/imp*100:0;
+    });
+    return {label:name, data, backgroundColor:color+'cc', borderColor:color, borderWidth:1.5, borderRadius:4};
+  });
+  charts.pcreator = new Chart(ctx, {
+    type:'bar', data:{labels:products, datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',align:'end',labels:{color:'#374151',font:{size:12},boxWidth:10,padding:16}},
+        title:{display:true,text:'CTR by product × creator',align:'start',color:'#111827',font:{size:14,weight:'600'},padding:{bottom:16}}},
+      scales:{x:{ticks:{color:'#9CA3AF'},grid:{display:false},border:{display:false}},y:{ticks:{color:'#9CA3AF',callback:v=>v.toFixed(1)+'%'},grid:{color:'#F3F4F6'},border:{display:false}}}
+    }
+  });
+}
+
+// ── CREATIVE PAGE ───────────────────────────────────────────────────────────
+function renderCreativePage() {
+  const data = filteredCreatives();
+
+  // KPIs
+  const spend=data.reduce((s,c)=>s+c.spend,0), lc=data.reduce((s,c)=>s+c.lc,0), imp=data.reduce((s,c)=>s+c.imp,0), pur=data.reduce((s,c)=>s+c.purchases,0);
+  document.getElementById('ckpi-spend').textContent  = '₩'+(spend/1000000).toFixed(1)+'M';
+  document.getElementById('ckpi-ctr').textContent    = (imp>0?lc/imp*100:0).toFixed(2)+'%';
+  document.getElementById('ckpi-cpc').textContent    = '₩'+Math.round(lc>0?spend/lc:0).toLocaleString();
+  document.getElementById('ckpi-pur').textContent    = pur.toLocaleString();
+  document.getElementById('ckpi-cpa').textContent    = pur>0?'₩'+Math.round(spend/pur).toLocaleString():'—';
+  document.getElementById('creative-count').textContent = data.length+' creatives';
+
+  // Top 10 bar
+  renderRankChart(data);
+
+  // Grid / table
+  if (state.creativeView==='grid') renderGrid(data);
+  else renderTable(data);
+}
+
+function renderRankChart(data) {
+  const metric = state.rankMetric;
+  const sorted = [...data].filter(c=>metric==='cpa'?c.purchases>0:true)
+    .sort((a,b)=>metric==='cpc'||metric==='cpa'?a[metric]-b[metric]:b[metric]-a[metric]).slice(0,10);
+  const ctx = document.getElementById('rank-chart').getContext('2d');
+  if (charts.rank) charts.rank.destroy();
+  charts.rank = new Chart(ctx, {
+    type:'bar',
+    data:{labels:sorted.map(c=>c.ad_name.length>20?c.ad_name.slice(0,19)+'…':c.ad_name),
+      datasets:[{data:sorted.map(c=>c[metric]),backgroundColor:sorted.map(c=>(CC[c.creator]||'#888')+'cc'),borderColor:sorted.map(c=>CC[c.creator]||'#888'),borderWidth:1.5,borderRadius:5}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},
+        title:{display:true,text:'Top 10 by '+metric,align:'start',color:'#111827',font:{size:14,weight:'600'},padding:{bottom:12}},
+        tooltip:{callbacks:{label:ctx=>{const v=ctx.raw;if(metric==='ctr')return ' '+v.toFixed(2)+'%';if(metric==='purchases')return ' '+Math.round(v);return ' ₩'+Math.round(v).toLocaleString();}}}},
+      scales:{x:{ticks:{color:'#9CA3AF',font:{size:11},callback:v=>metric==='ctr'?v.toFixed(1)+'%':metric==='purchases'?v:'₩'+Math.round(v/1000)+'K'},grid:{color:'#F3F4F6'},border:{display:false}},
+        y:{ticks:{color:'#374151',font:{size:12}},grid:{display:false},border:{display:false}}}
+    }
+  });
+}
+
+function setRank(m,el){state.rankMetric=m;document.querySelectorAll('[data-rank]').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderRankChart(filteredCreatives());}
+
+function renderGrid(data) {
+  const p=state.gridPage, total=data.length, pages=Math.ceil(total/GP);
+  if(p>pages) state.gridPage=1;
+  const slice=data.slice((state.gridPage-1)*GP, state.gridPage*GP);
+  const grid=document.getElementById('cc-grid');
+  grid.innerHTML='';
+  if(!slice.length){grid.innerHTML='<div style="grid-column:1/-1;padding:40px;text-align:center;color:#9CA3AF">조건에 맞는 소재가 없어요</div>';paginateEl('grid-pagi',1,0,GP,()=>{});return;}
+  slice.forEach((c,i)=>{
+    const color=CC[c.creator]||'#888';
+    const el=document.createElement('div');
+    el.className='cc'; el.onclick=()=>openDrawer(c);
+    let th='';
+    if(c.video_thumb) th='<div class="cc-thumb"><img src="'+c.video_thumb+'" loading="lazy" onerror="this.parentElement.style.display=\'none\'"><div class="cc-play-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg></div></div>';
+    else if(c.image_url) th='<div class="cc-thumb"><img src="'+c.image_url+'" loading="lazy" onerror="this.parentElement.style.display=\'none\'"></div>';
+    const purColor=c.purchases>0?'#059669':'#9CA3AF';
+    el.innerHTML=th
+      +'<div class="cc-body">'
+      +'<div class="cc-title">'+c.ad_name+'</div>'
+      +'<div class="cc-tags">'
+      +'<span class="tag '+(c.media_type==='vdo'?'tag-vdo':'tag-img')+'">'+(c.media_type==='vdo'?'Video':'Image')+'</span>'
+      +'<span class="tag tag-prod">'+c.product+'</span>'
+      +'<span class="tag tag-type">'+c.ad_type+'</span>'
+      +'</div>'
+      +'<div class="cc-nums">'
+      +'<div><div class="cc-nl">CTR</div><div class="cc-nv" style="color:'+color+'">'+c.ctr.toFixed(2)+'%</div></div>'
+      +'<div><div class="cc-nl">CPC</div><div class="cc-nv">₩'+Math.round(c.cpc/1000).toFixed(1)+'K</div></div>'
+      +'<div><div class="cc-nl">Pur</div><div class="cc-nv" style="color:'+purColor+'">'+(c.purchases||'—')+'</div></div>'
+      +'<div><div class="cc-nl">CPA</div><div class="cc-nv">'+(c.cpa>0?'₩'+Math.round(c.cpa/1000)+'K':'—')+'</div></div>'
+      +'</div>'
+      +'<div class="cc-spark"><canvas id="sp'+i+'" height="28"></canvas></div>'
+      +'<div class="cc-foot"><span style="display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:50%;background:'+color+';flex-shrink:0"></span><span style="color:'+color+';font-weight:600;font-size:12px">'+c.creator+'</span></span><span style="color:#9CA3AF;font-size:11px">'+Object.keys(c.daily).length+'일</span></div>'
+      +'</div>';
+    grid.appendChild(el);
+    setTimeout(()=>{
+      const dates=Object.keys(c.daily).sort(), vals=dates.map(d=>c.daily[d].imp>0?c.daily[d].lc/c.daily[d].imp*100:null);
+      const sc=document.getElementById('sp'+i); if(!sc||!dates.length) return;
+      new Chart(sc.getContext('2d'),{type:'line',data:{labels:dates,datasets:[{data:vals,borderColor:color,borderWidth:1.5,pointRadius:0,tension:.4,fill:true,backgroundColor:color+'18',spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}});
+    },0);
+  });
+  paginateEl('grid-pagi',state.gridPage,total,GP,p=>{state.gridPage=p;renderGrid(data);});
+}
+
+function renderTable(data) {
+  const p=state.tblPage, total=data.length, pages=Math.ceil(total/TP);
+  if(p>pages) state.tblPage=1;
+  const slice=data.slice((state.tblPage-1)*TP, state.tblPage*TP);
+  const maxSpend=data[0]?.spend||1;
+  window._tbl=slice;
+  document.getElementById('tbl-body').innerHTML=slice.map((r,idx)=>{
+    const color=CC[r.creator]||'#888', pct=(r.spend/maxSpend*100).toFixed(0), pur=r.purchases>0;
+    return '<tr onclick="openDrawer(window._tbl['+idx+'])">'
+      +'<td class="td-name">'+r.ad_name+'</td>'
+      +'<td><span class="chip" style="color:'+color+'"><span class="chip-dot" style="background:'+color+'"></span>'+r.creator+'</span></td>'
+      +'<td><span class="tag '+(r.media_type==='vdo'?'tag-vdo':'tag-img')+'">'+(r.media_type==='vdo'?'Video':'Image')+'</span></td>'
+      +'<td>'+r.product+'</td><td>'+r.ad_type+'</td>'
+      +'<td><div class="bar-cell"><span>₩'+(r.spend/1000).toFixed(0)+'K</span><div class="bar-bg"><div class="bar-fill" style="width:'+pct+'%;background:'+color+'88"></div></div></div></td>'
+      +'<td>'+r.ctr.toFixed(2)+'%</td>'
+      +'<td>₩'+Math.round(r.cpc).toLocaleString()+'</td>'
+      +'<td style="color:'+(pur?'#059669':'#9CA3AF')+';font-weight:'+(pur?600:400)+'">'+(pur?r.purchases:'—')+'</td>'
+      +'<td>'+(r.cpa>0?'₩'+Math.round(r.cpa).toLocaleString():'—')+'</td>'
+      +'</tr>';
+  }).join('');
+  paginateEl('tbl-pagi',state.tblPage,total,TP,p=>{state.tblPage=p;renderTable(data);});
+}
+
+function paginateEl(id,page,total,size,cb){
+  const pages=Math.ceil(total/size)||1;
+  const el=document.getElementById(id); if(!el) return;
+  el.innerHTML='';
+  const info=document.createElement('span');
+  info.style.cssText='font-size:12px;color:#9CA3AF';
+  info.textContent=total?((page-1)*size+1)+'–'+Math.min(page*size,total)+' / '+total:'';
+  el.appendChild(info);
+  const btns=document.createElement('div'); btns.style.cssText='display:flex;gap:4px';
+  const btn=(l,p,dis,act)=>{const b=document.createElement('button');b.className='pbtn'+(act?' active':'');b.textContent=l;b.disabled=dis;if(!dis)b.onclick=()=>cb(p);btns.appendChild(b);};
+  btn('‹',page-1,page<=1,false);
+  const s=Math.max(1,page-2),e=Math.min(pages,s+4);
+  for(let p=s;p<=e;p++) btn(p,p,false,p===page);
+  btn('›',page+1,page>=pages,false);
+  el.appendChild(btns);
+}
+
+function setCreativeView(v,el){
+  state.creativeView=v;
+  document.querySelectorAll('.vbtn').forEach(b=>b.classList.remove('active')); el.classList.add('active');
+  document.getElementById('view-grid').style.display=v==='grid'?'block':'none';
+  document.getElementById('view-table').style.display=v==='table'?'block':'none';
+  renderCreativePage();
+}
+
+// ── DRAWER ──────────────────────────────────────────────────────────────────
+function openDrawer(c) {
+  if(!c) return;
+  const color=CC[c.creator]||'#888';
+  document.getElementById('dr-title').textContent=c.ad_name;
+  document.getElementById('dr-chips').innerHTML=
+    '<span class="chip" style="color:'+color+'"><span class="chip-dot" style="background:'+color+'"></span>'+c.creator+'</span>'
+    +' <span class="tag '+(c.media_type==='vdo'?'tag-vdo':'tag-img')+'">'+(c.media_type==='vdo'?'Video':'Image')+'</span>'
+    +' <span class="tag tag-prod">'+c.product+'</span>'
+    +' <span class="tag tag-type">'+c.ad_type+'</span>';
+  document.getElementById('dr-kpis').innerHTML=[
+    {l:'Spend',v:'₩'+(c.spend/1000000).toFixed(2)+'M'},
+    {l:'CTR',v:c.ctr.toFixed(2)+'%',color},
+    {l:'CPC',v:'₩'+Math.round(c.cpc).toLocaleString()},
+    {l:'Purchases',v:c.purchases>0?c.purchases:'—',color:c.purchases>0?'#059669':undefined},
+    {l:'CPA',v:c.cpa>0?'₩'+Math.round(c.cpa).toLocaleString():'—'},
+    {l:'Active Days',v:Object.keys(c.daily).length},
+  ].map(k=>'<div class="dk"><div class="dk-l">'+k.l+'</div><div class="dk-v"'+(k.color?' style="color:'+k.color+'"':'')+'>'+k.v+'</div></div>').join('');
+
+  const drThumb=document.getElementById('dr-thumb');
+  if(c.video_url){drThumb.innerHTML='<iframe src="'+c.video_url+'" frameborder="0" allowfullscreen style="width:100%;aspect-ratio:16/9;border-radius:10px;border:1px solid #E5E7EB"></iframe>';drThumb.style.display='block';}
+  else if(c.image_url){drThumb.innerHTML='<img src="'+c.image_url+'" style="width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;border:1px solid #E5E7EB" onerror="this.parentElement.style.display=\'none\'">';drThumb.style.display='block';}
+  else drThumb.style.display='none';
+
+  const dates=Object.keys(c.daily).sort();
+  const dCtx=document.getElementById('dr-chart').getContext('2d');
+  if(charts.drawer) charts.drawer.destroy();
+  if(dates.length){
+    charts.drawer=new Chart(dCtx,{type:'line',data:{labels:dates.map(d=>d.slice(5)),datasets:[
+      {label:'CTR %',data:dates.map(d=>c.daily[d].imp>0?c.daily[d].lc/c.daily[d].imp*100:null),borderColor:color,backgroundColor:color+'15',borderWidth:2,pointRadius:3,tension:.4,yAxisID:'y',spanGaps:true},
+      {label:'Spend',data:dates.map(d=>c.daily[d].spend),borderColor:'#D1D5DB',borderDash:[4,3],borderWidth:1.5,pointRadius:0,tension:.4,yAxisID:'y2'}
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#6B7280',font:{size:11},boxWidth:10,padding:10}}},
+      scales:{x:{ticks:{color:'#9CA3AF',font:{size:10},maxTicksLimit:10},grid:{color:'#F9FAFB'},border:{display:false}},
+        y:{position:'left',ticks:{color:'#9CA3AF',font:{size:10},callback:v=>v.toFixed(1)+'%'},grid:{color:'#F9FAFB'},border:{display:false}},
+        y2:{position:'right',ticks:{color:'#9CA3AF',font:{size:10},callback:v=>'₩'+Math.round(v/1000)+'K'},grid:{display:false},border:{display:false}}}}});
+  }
+
+  const fD=[{l:'Impressions',v:c.imp||c.impressions},{l:'Clicks',v:c.lc||c.link_clicks},{l:'DPV',v:c.dpv||0},{l:'ATC',v:c.atc||0},{l:'Purchases',v:c.purchases}];
+  const maxV=fD[0].v||1;
+  document.getElementById('dr-funnel').innerHTML=fD.map(f=>
+    '<div class="funnel-row"><div class="funnel-label">'+f.l+'</div>'
+    +'<div class="funnel-bar-bg"><div class="funnel-bar-fill" style="width:'+Math.min(100,f.v/maxV*100).toFixed(1)+'%;background:'+color+'88"></div></div>'
+    +'<div class="funnel-val">'+(f.v>0?f.v.toLocaleString():'—')+'</div></div>'
+  ).join('');
+
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('drawer').classList.add('open');
+}
+function closeDrawer(){document.getElementById('overlay').classList.remove('open');document.getElementById('drawer').classList.remove('open');}
+
+// ── INIT ────────────────────────────────────────────────────────────────────
+function initProductPills() {
+  const prods=[...new Set(CREATIVE_DATA.map(c=>c.product).filter(p=>p&&p!=='Unknown'))].sort();
+  const container=document.getElementById('product-filter-pills');
+  container.innerHTML='';
+  prods.forEach(p=>{
+    const b=document.createElement('button');
+    b.className='filter-btn'; b.dataset.filter='product'; b.dataset.v=p; b.textContent=p;
+    b.onclick=()=>setFilter('product',p,b);
+    container.appendChild(b);
+  });
+}
+
+// Set default date range to full March
+const WEB_APP_URL = https://script.google.com/macros/s/AKfycbxnRuFbVDN5sOnOKfvN0pUWrbzrm778LCSkaECtbi7br5HUK5rEMijt4cUjKj7ldkvd/exec;
+
+async function loadDashboardData() {
+  try {
+    console.log("데이터를 불러오는 중...");
+    const response = await fetch(WEB_APP_URL);
+    const data = await response.json();
+    
+    const metaData = data.meta || [];
+    const amazonData = data.amazon || [];
+
+    // 1. 아마존 데이터를 딕셔너리로 묶기 (검색 속도 향상)
+    const amazonMap = {};
+    amazonData.forEach(row => {
+      if(!row['일자'] || !row['광고소재명']) return;
+      const key = row['일자'] + '|' + row['광고소재명'];
+      amazonMap[key] = {
+        dpv: parseFloat(row['dpv']) || 0,
+        atc: parseFloat(row['atc']) || 0,
+        purchases: parseFloat(row['purchases']) || 0
+      };
+    });
+
+    const combinedRaw = [];
+    const combinedCreativesMap = {};
+
+    // 2. 메타 데이터를 돌면서 아마존 데이터와 합치기
+    metaData.forEach(m => {
+      const date = m['일자'];
+      const metaAdName = m['광고소재명'];
+      if(!date || !metaAdName) return;
+
+      const imp = parseFloat(m['노출']) || 0;
+      const clicks = parseFloat(m['클릭']) || 0;
+      const spend = parseFloat(m['비용']) || 0;
+
+      // 메타 이름 자르기
+      const parts = metaAdName.split('_');
+      const amazonAdName = parts.slice(-5).join('_'); 
+      const creator = parts[parts.length - 1] || 'Unknown';          
+      const shortAdName = parts[parts.length - 2] || 'Unknown';      
+      const mediaType = parts[parts.length - 3] || 'Unknown';        
+      const product = parts[parts.length - 4] || 'Unknown';          
+      const adType = parts[parts.length - 5] || 'Unknown';           
+
+      const amz = amazonMap[date + '|' + amazonAdName] || { dpv: 0, atc: 0, purchases: 0 };
+
+      // raw 데이터용 배열
+      combinedRaw.push([
+        date, metaAdName, creator, mediaType, adType, product, shortAdName,
+        imp, clicks, 0, 0, spend, clicks, 0, 0
+      ]);
+
+      // 크리에이티브 집계용
+      const cKey = shortAdName + '|' + creator;
+      if (!combinedCreativesMap[cKey]) {
+        combinedCreativesMap[cKey] = {
+          ad_name: shortAdName, creator: creator, purchases: 0, atc: 0, dpv: 0
+        };
+      }
+      combinedCreativesMap[cKey].purchases += amz.purchases;
+      combinedCreativesMap[cKey].atc += amz.atc;
+      combinedCreativesMap[cKey].dpv += amz.dpv;
+    });
+
+    // 3. 글로벌 변수에 합친 데이터 덮어쓰기
+    RAW_DATA = combinedRaw;
+    CREATIVE_DATA = Object.values(combinedCreativesMap);
+
+    // 4. 날짜 변수 업데이트 및 UI 달력 세팅
+    ALL_DATES = [...new Set(RAW_DATA.map(r=>r[0]))].sort();
+    if(ALL_DATES.length > 0) {
+      MIN_DATE  = ALL_DATES[0];
+      MAX_DATE  = ALL_DATES[ALL_DATES.length-1];
+      
+      document.getElementById('dateFrom').value = MIN_DATE;
+      document.getElementById('dateTo').value   = MAX_DATE;
+      document.getElementById('dateFrom').min   = MIN_DATE;
+      document.getElementById('dateTo').min     = MIN_DATE;
+      document.getElementById('dateFrom').max   = MAX_DATE;
+      document.getElementById('dateTo').max     = MAX_DATE;
+    }
+
+    // 5. 화면 그리기 시작!
+    initProductPills();
+    render();
+    console.log("대시보드 데이터 로드 및 렌더링 완료!");
+
+  } catch (error) {
+    console.error("데이터 연동 실패:", error);
+    alert("구글 시트에서 데이터를 불러오는 데 실패했습니다.");
+  }
+}
+
+// 스크립트 실행
+loadDashboardData();
+</script>
+</body>
+</html>
