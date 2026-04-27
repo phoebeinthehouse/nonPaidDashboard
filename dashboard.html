@@ -1,1 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Non-Paid Video Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f6fa; color: #222; }
 
+  header { background: #fff; border-bottom: 1px solid #e0e0e0; padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 18px; font-weight: 700; }
+  #date-label { font-size: 13px; color: #888; }
+
+  #drop-zone {
+    margin: 48px auto; max-width: 480px; border: 2px dashed #c0c0c0; border-radius: 12px;
+    padding: 56px 32px; text-align: center; cursor: pointer; background: #fff;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  #drop-zone.hover { border-color: #4f8ef7; background: #f0f5ff; }
+  #drop-zone p { color: #888; font-size: 14px; margin-top: 8px; }
+  #drop-zone strong { font-size: 16px; color: #444; }
+  #file-input { display: none; }
+  #drop-zone svg { opacity: 0.35; }
+
+  #dashboard { display: none; padding: 28px 32px; max-width: 1100px; margin: 0 auto; }
+
+  h2 { font-size: 15px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 14px; }
+
+  /* Top 5 cards */
+  #top5-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; margin-bottom: 40px; }
+  .card {
+    background: #fff; border-radius: 10px; padding: 18px 16px;
+    border: 1px solid #eaeaea; position: relative;
+  }
+  .card .rank { position: absolute; top: 12px; right: 14px; font-size: 22px; font-weight: 800; color: #f0f0f0; }
+  .card .handle { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+  .card .meta { font-size: 12px; color: #999; margin-bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .views { font-size: 22px; font-weight: 700; color: #222; }
+  .card .delta { font-size: 13px; font-weight: 600; margin-top: 2px; }
+  .card .delta.pos { color: #22c55e; }
+  .card .delta.neg { color: #ef4444; }
+  .card .delta.zero { color: #aaa; }
+  .card .er { font-size: 12px; color: #888; margin-top: 6px; }
+  .card .trend-badge { display: inline-block; font-size: 11px; margin-top: 8px; padding: 2px 8px; border-radius: 20px; background: #f3f4f6; }
+
+  /* Trend chart */
+  #trend-wrap { background: #fff; border-radius: 10px; border: 1px solid #eaeaea; padding: 24px; margin-bottom: 40px; }
+  #trend-wrap canvas { max-height: 300px; }
+
+  /* All videos table */
+  #table-wrap { background: #fff; border-radius: 10px; border: 1px solid #eaeaea; overflow: auto; margin-bottom: 40px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 10px 14px; background: #fafafa; border-bottom: 1px solid #eaeaea; font-weight: 600; color: #666; white-space: nowrap; }
+  td { padding: 10px 14px; border-bottom: 1px solid #f2f2f2; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafbff; }
+  .num { font-variant-numeric: tabular-nums; }
+  .pos { color: #22c55e; font-weight: 600; }
+  .neg { color: #ef4444; font-weight: 600; }
+  .neutral { color: #aaa; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Non-Paid Video Dashboard</h1>
+  <span id="date-label"></span>
+</header>
+
+<div id="drop-zone" onclick="document.getElementById('file-input').click()">
+  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="1.5">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+    <line x1="12" y1="18" x2="12" y2="12"/>
+    <polyline points="9 15 12 12 15 15"/>
+  </svg>
+  <strong>Drop content_tracking.csv here</strong>
+  <p>or click to browse</p>
+  <input type="file" id="file-input" accept=".csv">
+</div>
+
+<div id="dashboard">
+  <h2>Top 5 Daily Growth</h2>
+  <div id="top5-grid"></div>
+
+  <h2>Daily View Growth — Top 10 Videos</h2>
+  <div id="trend-wrap"><canvas id="trend-chart"></canvas></div>
+
+  <h2>All Videos</h2>
+  <div id="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Handle</th><th>Channel</th><th>Product</th><th>Uploaded</th>
+          <th>Total Views</th><th>+Views Today</th><th>ER%</th><th>Trend</th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('hover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('hover'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('hover'); loadFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', e => loadFile(e.target.files[0]));
+
+function loadFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => buildDashboard(e.target.result);
+  reader.readAsText(file);
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim());
+  return lines.slice(1).map(line => {
+    const cols = [];
+    let cur = '', inQ = false;
+    for (const ch of line) {
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
+      else cur += ch;
+    }
+    cols.push(cur.trim());
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = cols[i] ?? '');
+    return obj;
+  });
+}
+
+function fmtNum(n) {
+  const v = parseInt(n) || 0;
+  if (Math.abs(v) >= 1_000_000) return (v / 1_000_000).toFixed(1) + 'M';
+  if (Math.abs(v) >= 1_000) return (v / 1_000).toFixed(1) + 'K';
+  return v.toLocaleString();
+}
+
+function deltaClass(v) {
+  const n = parseInt(v);
+  if (isNaN(n) || v === '' || v === '–') return 'neutral';
+  return n > 0 ? 'pos' : n < 0 ? 'neg' : 'neutral';
+}
+
+function fmtDelta(v) {
+  const n = parseInt(v);
+  if (isNaN(n) || v === '' || v === '–') return '–';
+  return (n > 0 ? '+' : '') + fmtNum(n);
+}
+
+let trendChart = null;
+
+function buildDashboard(csvText) {
+  const rows = parseCSV(csvText);
+  if (!rows.length) return;
+
+  const dates = [...new Set(rows.map(r => r.date))].sort();
+  const latest = dates[dates.length - 1];
+  document.getElementById('date-label').textContent = `Data for ${latest}`;
+
+  const today = rows.filter(r => r.date === latest);
+  const sorted = [...today].sort((a, b) => (parseInt(b.delta_views) || 0) - (parseInt(a.delta_views) || 0));
+
+  const top5 = sorted.slice(0, 5);
+  const grid = document.getElementById('top5-grid');
+  grid.innerHTML = '';
+  top5.forEach((r, i) => {
+    const dv = parseInt(r.delta_views);
+    const cls = isNaN(dv) ? 'zero' : dv > 0 ? 'pos' : dv < 0 ? 'neg' : 'zero';
+    grid.innerHTML += `
+      <div class="card">
+        <div class="rank">${i + 1}</div>
+        <div class="handle">${r.handle || '—'}</div>
+        <div class="meta">${r.channel} · ${r.product || '—'}</div>
+        <div class="views">${fmtNum(r.views)}</div>
+        <div class="delta ${cls}">${fmtDelta(r.delta_views)} views today</div>
+        <div class="er">ER ${parseFloat(r.engagement_rate || 0).toFixed(2)}%</div>
+        <div class="trend-badge">${r.trend || '–'}</div>
+      </div>`;
+  });
+
+  const topHandles = [...today]
+    .sort((a, b) => (parseInt(b.views) || 0) - (parseInt(a.views) || 0))
+    .slice(0, 10)
+    .map(r => r.url);
+
+  const palette = ['#4f8ef7','#f7954f','#4fcbb5','#f74f6e','#a34ff7',
+                   '#f7e24f','#4ff773','#f74fc0','#4fd4f7','#b5f74f'];
+
+  const datasets = topHandles.map((url, idx) => {
+    const rec = today.find(r => r.url === url);
+    const label = rec ? (rec.handle || url.slice(-12)) : url.slice(-12);
+    const data = dates.map(d => {
+      const entry = rows.find(r => r.date === d && r.url === url);
+      return entry ? (parseInt(entry.delta_views) || 0) : null;
+    });
+    return { label, data, borderColor: palette[idx % palette.length],
+             backgroundColor: palette[idx % palette.length] + '22',
+             tension: 0.3, pointRadius: 3, fill: false, spanGaps: true };
+  });
+
+  if (trendChart) trendChart.destroy();
+  trendChart = new Chart(document.getElementById('trend-chart'), {
+    type: 'line',
+    data: { labels: dates, datasets },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 } } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { ticks: { font: { size: 11 }, callback: v => fmtNum(v) }, grid: { color: '#f0f0f0' } }
+      }
+    }
+  });
+
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = '';
+  sorted.forEach(r => {
+    const dc = deltaClass(r.delta_views);
+    tbody.innerHTML += `
+      <tr>
+        <td>${r.handle || '—'}</td>
+        <td>${r.channel}</td>
+        <td>${r.product || '—'}</td>
+        <td>${r.uploaded_date || '—'}</td>
+        <td class="num">${fmtNum(r.views)}</td>
+        <td class="num ${dc}">${fmtDelta(r.delta_views)}</td>
+        <td class="num">${parseFloat(r.engagement_rate || 0).toFixed(2)}%</td>
+        <td>${r.trend || '–'}</td>
+      </tr>`;
+  });
+
+  dropZone.style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+}
+</script>
+</body>
+</html>
