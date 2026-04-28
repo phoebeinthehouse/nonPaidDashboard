@@ -182,7 +182,15 @@ function parseCsvLine(line) {
 function parseCsv(text) {
   const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim().split('\n');
   const headers = parseCsvLine(lines[0]);
-  return lines.slice(1).filter(l => l.trim()).map(line => {
+  // Rejoin rows that were split mid-line by embedded CR characters
+  const isRowStart = /^\d{4}-\d{2}-\d{2},/;
+  const joined = [];
+  for (const line of lines.slice(1)) {
+    if (!line.trim()) continue;
+    if (isRowStart.test(line) || joined.length === 0) joined.push(line);
+    else joined[joined.length - 1] += line;
+  }
+  return joined.map(line => {
     const cols = parseCsvLine(line);
     const obj = {};
     headers.forEach((h, i) => obj[h.trim()] = (cols[i] || '').trim());
