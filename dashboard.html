@@ -139,7 +139,7 @@ tr:hover td{background:var(--surface2);}
   <div class="creator-grid" id="top5-grid"></div>
 
   <div class="chart-card">
-    <div class="chart-head"><div class="chart-title">View Growth Trend — Top 10 Videos</div></div>
+    <div class="chart-head"><div class="chart-title">Daily View Growth (+Views) — Top 10 Videos</div></div>
     <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
     <div class="chart-empty" id="chart-empty" style="display:none">Not enough history data yet.</div>
   </div>
@@ -229,7 +229,7 @@ function processData(text) {
   rows.forEach(r => {
     if (!r.url) return;
     if (!hmap[r.url]) hmap[r.url] = [];
-    hmap[r.url].push({ date: r.date, views: parseInt(r.views) || 0 });
+    hmap[r.url].push({ date: r.date, views: parseInt(r.views) || 0, delta: (r.delta_views !== '' && r.delta_views != null) ? parseInt(r.delta_views) : null });
   });
   Object.keys(hmap).forEach(url => hmap[url].sort((a, b) => a.date.localeCompare(b.date)));
   historyMap = hmap;
@@ -365,17 +365,17 @@ function render() {
   } else {
     canvas.style.display = 'block';
     empty.style.display  = 'none';
-    const top10 = [...rows].sort((a, b) => b.views - a.views).slice(0, 10);
+    const top10 = [...rows].sort((a, b) => (b.deltaViews ?? 0) - (a.deltaViews ?? 0)).slice(0, 10);
     const datasets = top10.map((r, idx) => {
       const hist = historyMap[r.url] || [];
       const map  = {};
-      hist.forEach(h => map[h.date] = h.views);
+      hist.forEach(h => { if (h.delta != null) map[h.date] = h.delta; });
       return {
         label: r.handle || r.url.slice(-12),
         data: dates.map(d => map[d] ?? null),
         borderColor: COLORS[idx % COLORS.length],
         backgroundColor: COLORS[idx % COLORS.length] + '18',
-        tension: 0.3, pointRadius: 2, borderWidth: 2, fill: false, spanGaps: true,
+        tension: 0.3, pointRadius: 3, borderWidth: 2, fill: false, spanGaps: true,
       };
     });
     if (trendChart) trendChart.destroy();
@@ -387,7 +387,7 @@ function render() {
         plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 }, padding: 12 } } },
         scales: {
           x: { grid: { display: false }, ticks: { font: { size: 11 }, maxTicksLimit: 10 } },
-          y: { ticks: { font: { size: 11 }, callback: v => fmt(v) }, grid: { color: '#F3F4F6' } }
+          y: { ticks: { font: { size: 11 }, callback: v => fmtD(v) }, grid: { color: '#F3F4F6' } }
         }
       }
     });
