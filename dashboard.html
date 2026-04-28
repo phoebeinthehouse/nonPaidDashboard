@@ -180,7 +180,7 @@ function parseCsvLine(line) {
 }
 
 function parseCsv(text) {
-  const lines = text.trim().split('\n');
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim().split('\n');
   const headers = parseCsvLine(lines[0]);
   return lines.slice(1).filter(l => l.trim()).map(line => {
     const cols = parseCsvLine(line);
