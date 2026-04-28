@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Non-Paid Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#F9FAFB;--surface:#FFFFFF;--surface2:#F3F4F6;
+  --border:#E5E7EB;--text:#111827;--muted:#6B7280;--subtle:#9CA3AF;
+  --radius:12px;
+  --green:#059669;--red:#DC2626;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;}
+
+.nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;position:sticky;top:0;z-index:100;}
+.nav-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;}
+.nav-brand{font-size:13px;font-weight:700;padding:14px 0;margin-right:2rem;letter-spacing:-.01em;}
+.nav-brand span{color:var(--muted);font-weight:400;}
+.nav-right{margin-left:auto;font-size:12px;color:var(--subtle);padding:14px 0;}
+
+.filter-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:6px 1.5rem;}
+.filter-bar-inner{max-width:1280px;margin:0 auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.filter-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--subtle);margin-right:2px;white-space:nowrap;}
+.filter-btn{padding:4px 12px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:inherit;transition:all .15s;}
+.filter-btn:hover{border-color:#9CA3AF;}
+.filter-btn.active{background:var(--surface2);color:var(--text);border-color:#9CA3AF;font-weight:600;}
+.filter-sep{width:1px;height:16px;background:var(--border);margin:0 4px;}
+
+.pg{max-width:1280px;margin:0 auto;padding:1.75rem 1.5rem;}
+.section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--subtle);margin-bottom:10px;}
+
+.ckpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1.5rem;}
+@media(max-width:900px){.ckpi-row{grid-template-columns:repeat(3,1fr);}}
+.ckpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
+.ckpi-l{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--subtle);margin-bottom:4px;}
+.ckpi-v{font-size:22px;font-weight:700;letter-spacing:-.02em;}
+.ckpi-v.green{color:var(--green);}
+.ckpi-v.red{color:var(--red);}
+
+.creator-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:1.5rem;}
+@media(max-width:1100px){.creator-grid{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:700px){.creator-grid{grid-template-columns:1fr;}}
+.creator-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;position:relative;}
+.ccard-top{display:flex;align-items:center;gap:10px;margin-bottom:1rem;}
+.ccard-av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;color:#fff;}
+.ccard-name{font-size:14px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ccard-sub{font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ccard-stats{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px;}
+.cstat{background:var(--surface2);border-radius:8px;padding:7px 9px;}
+.cstat-l{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--subtle);margin-bottom:2px;}
+.cstat-v{font-size:13px;font-weight:700;letter-spacing:-.01em;}
+.cstat-v.green{color:var(--green);}
+.cstat-v.red{color:var(--red);}
+.rank-badge{position:absolute;top:10px;right:12px;font-size:24px;font-weight:800;color:#F3F4F6;line-height:1;}
+.tag{display:inline-block;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:600;}
+.tag-tiktok{background:#E0F2FE;color:#0369A1;}
+.tag-ig{background:#FCE7F3;color:#9D174D;}
+.tag-organic{background:#D1FAE5;color:#065F46;}
+.tag-seeding{background:#FEF3C7;color:#92400E;}
+
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.5rem;margin-bottom:1.25rem;}
+.chart-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+.chart-title{font-size:13px;font-weight:700;}
+.chart-wrap canvas{max-height:280px;}
+.chart-empty{text-align:center;color:var(--subtle);font-size:13px;padding:48px 0;}
+
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:.06em;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--surface2);}
+
+#drop-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:48px;text-align:center;color:var(--muted);font-size:13px;background:var(--surface);cursor:pointer;transition:all .2s;margin:2rem auto;max-width:500px;}
+#drop-zone.drag-over{border-color:var(--text);background:var(--surface2);}
+#drop-zone p{margin-top:8px;font-size:12px;color:var(--subtle);}
+#file-input{display:none;}
+
+#loading{text-align:center;padding:80px 32px;color:var(--muted);}
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--text);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="nav-brand">Non-Paid Dashboard <span>· Organic & Seeding</span></div>
+    <div class="nav-right" id="asof-label"></div>
+  </div>
+</nav>
+
+<div class="filter-bar" id="filter-bar" style="display:none">
+  <div class="filter-bar-inner">
+    <span class="filter-label">Channel</span>
+    <button class="filter-btn active" onclick="setFilter('channel','all',this)">All</button>
+    <button class="filter-btn" onclick="setFilter('channel','tiktok',this)">TikTok</button>
+    <button class="filter-btn" onclick="setFilter('channel','instagram',this)">Instagram</button>
+    <div class="filter-sep"></div>
+    <span class="filter-label">Type</span>
+    <button class="filter-btn active" onclick="setFilter('type','all',this)">All</button>
+    <button class="filter-btn" onclick="setFilter('type','오가닉',this)">Organic</button>
+    <button class="filter-btn" onclick="setFilter('type','무가씨딩',this)">Seeding</button>
+    <div class="filter-sep"></div>
+    <span class="filter-label">Sort</span>
+    <button class="filter-btn active" id="sort-growth" onclick="setSort('growth',this)">Growth</button>
+    <button class="filter-btn" id="sort-views" onclick="setSort('views',this)">Views</button>
+    <button class="filter-btn" id="sort-er" onclick="setSort('er',this)">ER%</button>
+  </div>
+</div>
+
+<div id="loading"><span class="spinner"></span>Loading data…</div>
+
+<div class="pg" id="drop-section" style="display:none">
+  <div id="drop-zone" onclick="document.getElementById('file-input').click()"
+       ondragover="event.preventDefault();this.classList.add('drag-over')"
+       ondragleave="this.classList.remove('drag-over')"
+       ondrop="handleDrop(event)">
+    <div style="font-size:28px">📂</div>
+    <strong>Drop content_tracking.csv here</strong>
+    <p>or click to browse</p>
+  </div>
+  <input type="file" id="file-input" accept=".csv" onchange="handleFile(this.files[0])">
+</div>
+
+<div class="pg" id="dashboard" style="display:none">
+  <div class="ckpi-row">
+    <div class="ckpi"><div class="ckpi-l">Total Videos</div><div class="ckpi-v" id="kpi-total">—</div></div>
+    <div class="ckpi"><div class="ckpi-l">Total Views</div><div class="ckpi-v" id="kpi-views">—</div></div>
+    <div class="ckpi"><div class="ckpi-l">Avg ER%</div><div class="ckpi-v" id="kpi-er">—</div></div>
+    <div class="ckpi"><div class="ckpi-l">Growing</div><div class="ckpi-v green" id="kpi-growing">—</div></div>
+    <div class="ckpi"><div class="ckpi-l">Dropping</div><div class="ckpi-v red" id="kpi-dropping">—</div></div>
+  </div>
+
+  <div class="section-label">Top 5 Daily Growth</div>
+  <div class="creator-grid" id="top5-grid"></div>
+
+  <div class="chart-card">
+    <div class="chart-head"><div class="chart-title">View Growth Trend — Top 10 Videos</div></div>
+    <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
+    <div class="chart-empty" id="chart-empty" style="display:none">Not enough history data yet.</div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-head"><div class="chart-title">All Videos</div></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Handle</th><th>Channel</th><th>Type</th><th>Product</th>
+          <th>Uploaded</th><th>Views</th><th>+Views</th><th>ER%</th><th>Trend</th>
+        </tr></thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const CSV_URL = 'https://raw.githubusercontent.com/phoebeinthehouse/nonPaidDashboard/main/content_tracking.csv';
+const COLORS = ['#3B82F6','#F59E0B','#10B981','#EF4444','#8B5CF6','#EC4899','#06B6D4','#84CC16','#F97316','#6366F1'];
+
+let state = { channel: 'all', type: 'all', sort: 'growth' };
+let allRows = [], dates = [], historyMap = {};
+let trendChart = null;
+
+function parseCsvLine(line) {
+  const cols = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; continue; }
+    if (c === ',' && !inQ) { cols.push(cur); cur = ''; continue; }
+    cur += c;
+  }
+  cols.push(cur);
+  return cols;
+}
+
+function parseCsv(text) {
+  const lines = text.trim().split('\n');
+  const headers = parseCsvLine(lines[0]);
+  return lines.slice(1).filter(l => l.trim()).map(line => {
+    const cols = parseCsvLine(line);
+    const obj = {};
+    headers.forEach((h, i) => obj[h.trim()] = (cols[i] || '').trim());
+    return obj;
+  });
+}
+
+async function init() {
+  try {
+    const res = await fetch(CSV_URL);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    processData(text);
+  } catch(e) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('drop-section').style.display = 'block';
+  }
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) handleFile(f);
+}
+function handleFile(f) {
+  const reader = new FileReader();
+  reader.onload = ev => processData(ev.target.result);
+  reader.readAsText(f);
+}
+
+function processData(text) {
+  const rows = parseCsv(text);
+
+  const hmap = {};
+  rows.forEach(r => {
+    if (!r.url) return;
+    if (!hmap[r.url]) hmap[r.url] = [];
+    hmap[r.url].push({ date: r.date, views: parseInt(r.views) || 0 });
+  });
+  Object.keys(hmap).forEach(url => hmap[url].sort((a, b) => a.date.localeCompare(b.date)));
+  historyMap = hmap;
+
+  dates = [...new Set(rows.map(r => r.date))].sort();
+  const latestDate = dates[dates.length - 1];
+
+  allRows = rows.filter(r => r.date === latestDate).map(r => ({
+    url:           r.url,
+    channel:       r.channel,
+    content_type:  r.content_type,
+    handle:        r.handle,
+    followers:     parseInt(r.followers) || 0,
+    tier:          r.tier,
+    product:       r.product,
+    uploaded_date: r.uploaded_date,
+    views:         parseInt(r.views) || 0,
+    likes:         parseInt(r.likes) || 0,
+    comments:      parseInt(r.comments) || 0,
+    shares:        parseInt(r.shares) || 0,
+    saves:         parseInt(r.saves) || 0,
+    er:            parseFloat(r.engagement_rate) || 0,
+    deltaViews:    (r.delta_views !== '' && r.delta_views != null) ? parseInt(r.delta_views) : null,
+    trend:         r.trend || '—',
+  }));
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('drop-section').style.display = 'none';
+  document.getElementById('asof-label').textContent = 'As of ' + latestDate + ' · ' + allRows.length + ' videos';
+  document.getElementById('filter-bar').style.display = 'block';
+  document.getElementById('dashboard').style.display = 'block';
+  render();
+}
+
+function setFilter(key, val, el) {
+  state[key] = val;
+  const groups = {
+    channel: ['all','tiktok','instagram'],
+    type:    ['all','오가닉','무가씨딩'],
+  };
+  document.querySelectorAll('.filter-bar-inner .filter-btn').forEach(b => {
+    if (groups[key].some(x => b.textContent.trim().toLowerCase() === (x === '오가닉' ? 'organic' : x === '무가씨딩' ? 'seeding' : x)))
+      b.classList.remove('active');
+  });
+  el.classList.add('active');
+  render();
+}
+
+function setSort(s, el) {
+  state.sort = s;
+  document.querySelectorAll('#sort-growth,#sort-views,#sort-er').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  render();
+}
+
+function getFiltered() {
+  return allRows.filter(r => {
+    if (state.channel !== 'all' && !(r.channel || '').toLowerCase().includes(state.channel)) return false;
+    if (state.type !== 'all' && r.content_type !== state.type) return false;
+    return true;
+  });
+}
+
+function getSorted(rows) {
+  return [...rows].sort((a, b) => {
+    if (state.sort === 'growth') {
+      const av = a.deltaViews ?? -Infinity, bv = b.deltaViews ?? -Infinity;
+      return bv - av;
+    }
+    if (state.sort === 'er') return b.er - a.er;
+    return b.views - a.views;
+  });
+}
+
+function fmt(n) {
+  const v = parseInt(n) || 0;
+  if (Math.abs(v) >= 1e6) return (v/1e6).toFixed(1) + 'M';
+  if (Math.abs(v) >= 1e3) return (v/1e3).toFixed(1) + 'K';
+  return v.toLocaleString();
+}
+function fmtD(v) {
+  if (v == null) return '—';
+  return (v > 0 ? '+' : '') + fmt(v);
+}
+function dCls(v) { return v == null ? '' : v > 0 ? 'green' : v < 0 ? 'red' : ''; }
+function isIG(r) { return (r.channel || '').toLowerCase().includes('instagram'); }
+
+function render() {
+  const rows  = getFiltered();
+  const srows = getSorted(rows);
+
+  const totalViews = rows.reduce((s, r) => s + r.views, 0);
+  const avgEr      = rows.length ? (rows.reduce((s, r) => s + r.er, 0) / rows.length).toFixed(2) : '0.00';
+  const growing    = rows.filter(r => r.deltaViews > 0).length;
+  const dropping   = rows.filter(r => r.deltaViews < 0).length;
+  document.getElementById('kpi-total').textContent    = rows.length;
+  document.getElementById('kpi-views').textContent    = fmt(totalViews);
+  document.getElementById('kpi-er').textContent       = avgEr + '%';
+  document.getElementById('kpi-growing').textContent  = growing;
+  document.getElementById('kpi-dropping').textContent = dropping;
+
+  const top5 = srows.slice(0, 5);
+  document.getElementById('top5-grid').innerHTML = top5.map((r, i) => {
+    const bg       = COLORS[i % COLORS.length];
+    const initials = (r.handle || '?').replace('@','').slice(0,2).toUpperCase();
+    const chTag    = isIG(r) ? '<span class="tag tag-ig">Instagram</span>' : '<span class="tag tag-tiktok">TikTok</span>';
+    const typeTag  = r.content_type === '오가닉' ? '<span class="tag tag-organic">Organic</span>' : '<span class="tag tag-seeding">Seeding</span>';
+    return `
+    <div class="creator-card">
+      <div class="rank-badge">${i+1}</div>
+      <div class="ccard-top">
+        <div class="ccard-av" style="background:${bg}">${initials}</div>
+        <div style="min-width:0">
+          <div class="ccard-name">${r.handle || '—'}</div>
+          <div class="ccard-sub">${r.product || '—'}</div>
+        </div>
+      </div>
+      <div class="ccard-stats">
+        <div class="cstat"><div class="cstat-l">Views</div><div class="cstat-v">${fmt(r.views)}</div></div>
+        <div class="cstat"><div class="cstat-l">+Views</div><div class="cstat-v ${dCls(r.deltaViews)}">${fmtD(r.deltaViews)}</div></div>
+        <div class="cstat"><div class="cstat-l">ER%</div><div class="cstat-v">${r.er.toFixed(2)}%</div></div>
+        <div class="cstat"><div class="cstat-l">Likes</div><div class="cstat-v">${fmt(r.likes)}</div></div>
+      </div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap">${chTag} ${typeTag}</div>
+    </div>`;
+  }).join('');
+
+  const canvas = document.getElementById('trend-chart');
+  const empty  = document.getElementById('chart-empty');
+  if (dates.length < 2) {
+    canvas.style.display = 'none';
+    empty.style.display  = 'block';
+  } else {
+    canvas.style.display = 'block';
+    empty.style.display  = 'none';
+    const top10 = [...rows].sort((a, b) => b.views - a.views).slice(0, 10);
+    const datasets = top10.map((r, idx) => {
+      const hist = historyMap[r.url] || [];
+      const map  = {};
+      hist.forEach(h => map[h.date] = h.views);
+      return {
+        label: r.handle || r.url.slice(-12),
+        data: dates.map(d => map[d] ?? null),
+        borderColor: COLORS[idx % COLORS.length],
+        backgroundColor: COLORS[idx % COLORS.length] + '18',
+        tension: 0.3, pointRadius: 2, borderWidth: 2, fill: false, spanGaps: true,
+      };
+    });
+    if (trendChart) trendChart.destroy();
+    trendChart = new Chart(canvas, {
+      type: 'line',
+      data: { labels: dates, datasets },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 }, padding: 12 } } },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 11 }, maxTicksLimit: 10 } },
+          y: { ticks: { font: { size: 11 }, callback: v => fmt(v) }, grid: { color: '#F3F4F6' } }
+        }
+      }
+    });
+  }
+
+  document.getElementById('table-body').innerHTML = srows.map((r, i) => {
+    const chTag   = isIG(r) ? '<span class="tag tag-ig">Instagram</span>' : '<span class="tag tag-tiktok">TikTok</span>';
+    const typeTag = r.content_type === '오가닉' ? '<span class="tag tag-organic">Organic</span>' : '<span class="tag tag-seeding">Seeding</span>';
+    const dv      = r.deltaViews;
+    const dvColor = dv == null ? 'var(--muted)' : dv > 0 ? 'var(--green)' : dv < 0 ? 'var(--red)' : 'var(--muted)';
+    return `<tr>
+      <td style="color:var(--subtle);font-size:12px">${i+1}</td>
+      <td><a href="${r.url}" target="_blank" style="color:var(--text);font-weight:500;text-decoration:none">${r.handle || '—'}</a></td>
+      <td>${chTag}</td>
+      <td>${typeTag}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">${r.product || '—'}</td>
+      <td style="color:var(--muted)">${r.uploaded_date || '—'}</td>
+      <td style="font-variant-numeric:tabular-nums;font-weight:500">${fmt(r.views)}</td>
+      <td style="font-variant-numeric:tabular-nums;color:${dvColor};font-weight:${dv!=null?600:400}">${fmtD(dv)}</td>
+      <td style="font-variant-numeric:tabular-nums">${r.er.toFixed(2)}%</td>
+      <td>${r.trend}</td>
+    </tr>`;
+  }).join('');
+}
+
+init();
+</script>
+</body>
+</html>
